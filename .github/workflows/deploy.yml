@@ -20,33 +20,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
+      
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: '16'
           cache: 'npm'
-
+      
       - name: Setup Pages
         uses: actions/configure-pages@v3
-
+      
       - name: Install dependencies
         run: npm ci
-
+      
       - name: Build package
         run: npm run build
-
-      - name: Build example
+      
+      - name: Setup GitHub Pages example
         run: |
           cd example/github-pages-example
           npm ci
           npm run build
-
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
           path: './example/github-pages-example/dist'
-
+  
   deploy:
     environment:
       name: github-pages
