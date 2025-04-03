@@ -1,3 +1,4 @@
+// example/bundled-example/webpack.config.js
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
@@ -32,6 +33,17 @@ module.exports = {
       'node_modules',
       path.resolve(__dirname, '../../node_modules'),
       path.resolve(__dirname, '../..')
-    ]
+    ],
+    // Add this to ensure single instance of codemirror modules
+    alias: {
+      '@codemirror/state': path.resolve(__dirname, '../../node_modules/@codemirror/state'),
+      '@codemirror/view': path.resolve(__dirname, '../../node_modules/@codemirror/view'),
+      '@codemirror/language': path.resolve(__dirname, '../../node_modules/@codemirror/language'),
+      '@codemirror/autocomplete': path.resolve(__dirname, '../../node_modules/@codemirror/autocomplete'),
+      '@codemirror/lint': path.resolve(__dirname, '../../node_modules/@codemirror/lint'),
+      '@lezer/common': path.resolve(__dirname, '../../node_modules/@lezer/common'),
+      '@lezer/lr': path.resolve(__dirname, '../../node_modules/@lezer/lr'),
+      '@lezer/highlight': path.resolve(__dirname, '../../node_modules/@lezer/highlight')
+    }
   }
 };

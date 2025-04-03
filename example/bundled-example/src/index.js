@@ -5,7 +5,7 @@ import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 
-// Import your LaTeX extension - webpack will resolve this from the parent directory
+// Import the LaTeX extension - webpack will resolve this from the parent directory
 import { latex } from '../../../dist/index.js';
 // Import the LaTeX CSS
 import '../../../dist/latex.css';
@@ -75,12 +75,18 @@ function createEditor() {
       ...closeBracketsKeymap
     ]),
 
-    // Add the LaTeX language support with current options
-    latex(currentOptions),
-
     // Line wrapping is helpful for LaTeX
     EditorView.lineWrapping
   ];
+
+  // Add the LaTeX language support with current options
+  try {
+    const latexExtension = latex(currentOptions);
+    extensions.push(latexExtension);
+  } catch (error) {
+    console.error("Failed to load LaTeX extension:", error);
+    // Continue with basic editor if LaTeX extension fails
+  }
 
   const state = EditorState.create({
     doc: initialDoc,

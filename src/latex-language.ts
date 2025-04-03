@@ -2,12 +2,11 @@ import { parser } from './latex.mjs';
 import { LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
   foldInside, bracketMatching } from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
-import { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { Extension } from '@codemirror/state';
 import { keymap, hoverTooltip } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
 
-import { getIndentationLevel, foldableNodeTypes } from './parser-integration';
+import { getIndentationLevel, foldableNodeTypes } from './parser-utils';
 import { latexCompletionSource } from './completion';
 import { autoCloseTags, latexKeymap } from './auto-close-tags';
 import { latexLinter } from './linter';
@@ -204,13 +203,20 @@ export function latex(config: {
     ...config
   };
 
-  const extensions: Extension[] = [
+  const extensions = [];
+
+  // Add the language data with autocompletion
+  extensions.push(
     latexLanguage.data.of({
       autocomplete: latexCompletionSource
-    }),
-    latexBracketMatching,
-    keymap.of(latexKeymap)
-  ];
+    })
+  );
+
+  // Add bracket matching
+  extensions.push(latexBracketMatching);
+
+  // Add keymap
+  extensions.push(keymap.of(latexKeymap));
 
   // Add optional extensions based on config
   if (options.autoCloseTags) {

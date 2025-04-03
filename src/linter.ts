@@ -150,20 +150,33 @@ export function latexLinter(options: {
 
 // Helper function to find environment name node
 function findEnvName(node: any): SyntaxNode | null {
-  // Look for the EnvName child, possibly inside an EnvNameGroup
-  const envNameGroup = node.getChild('EnvNameGroup');
+  // Look for the EnvNameGroup child
+  let envNameGroup = null;
+
+  // Find EnvNameGroup among children
+  for (let child = node.node.firstChild; child; child = child.nextSibling) {
+    if (child.name === 'EnvNameGroup') {
+      envNameGroup = child;
+      break;
+    }
+  }
+
   if (envNameGroup) {
     // Try to find various environment name node types
-    return envNameGroup.getChild('EnvName') ||
-           envNameGroup.getChild('DocumentEnvName') ||
-           envNameGroup.getChild('TabularEnvName') ||
-           envNameGroup.getChild('EquationEnvName') ||
-           envNameGroup.getChild('EquationArrayEnvName') ||
-           envNameGroup.getChild('VerbatimEnvName') ||
-           envNameGroup.getChild('TikzPictureEnvName') ||
-           envNameGroup.getChild('FigureEnvName') ||
-           envNameGroup.getChild('ListEnvName') ||
-           envNameGroup.getChild('TableEnvName');
+    for (let child = envNameGroup.firstChild; child; child = child.nextSibling) {
+      if (child.name === 'EnvName' ||
+          child.name === 'DocumentEnvName' ||
+          child.name === 'TabularEnvName' ||
+          child.name === 'EquationEnvName' ||
+          child.name === 'EquationArrayEnvName' ||
+          child.name === 'VerbatimEnvName' ||
+          child.name === 'TikzPictureEnvName' ||
+          child.name === 'FigureEnvName' ||
+          child.name === 'ListEnvName' ||
+          child.name === 'TableEnvName') {
+        return child;
+      }
+    }
   }
   return null;
 }
