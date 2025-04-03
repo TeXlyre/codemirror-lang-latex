@@ -1,6 +1,6 @@
 # CodeMirror 6 LaTeX Language Support
 
-This package provides LaTeX language support for the [CodeMirror 6](https://codemirror.net/6/) code editor, based on the Overleaf LaTeX grammar.
+This package provides LaTeX language support for the [CodeMirror 6](https://codemirror.net/6/) code editor, based on the [Overleaf LaTeX grammar](https://github.com/overleaf/overleaf/tree/3b5a148cdc57d8a739d9773518309e54d0ecc3cd/services/web/frontend/js/features/source-editor/lezer-latex).
 
 ## Features
 

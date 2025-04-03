@@ -10,8 +10,8 @@
     "generate-parser": "node scripts/generate-parser.cjs",
     "build": "npm run generate-parser && tsc && rollup -c && cp src/latex.css dist/",
     "prepare": "npm run build",
-    "setup-example": "cd example/bundled-example && npm install",
-    "example": "cd example/bundled-example && npm start"
+    "setup-example": "cd example/webpack-bundled-example && npm install",
+    "example": "cd example/webpack-bundled-example && npm start"
   },
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.0.0",
