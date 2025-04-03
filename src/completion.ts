@@ -192,9 +192,12 @@ export const snippets: readonly Completion[] = [
 
 // Main completion function that provides autocomplete suggestions based on context
 export function latexCompletionSource(context: CompletionContext): CompletionResult | null {
-  // Don't autocomplete if there's nothing
-  if (!context.explicit && !context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/)) {
-    return null;
+  // Broaden the matching pattern for better detection
+  if (!context.explicit) {
+    const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);
+    if (!before || before.from === before.to) {
+      return null;
+    }
   }
 
   // Check if we're in an environment name

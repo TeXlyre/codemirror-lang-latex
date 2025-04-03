@@ -3,10 +3,11 @@ import { LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
   foldInside, bracketMatching } from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
 import { Extension } from '@codemirror/state';
-import { keymap, hoverTooltip } from '@codemirror/view';
+import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
+import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
-import { getIndentationLevel, foldableNodeTypes } from './parser-utils';
 import { latexCompletionSource } from './completion';
 import { autoCloseTags, latexKeymap } from './auto-close-tags';
 import { latexLinter } from './linter';
@@ -186,20 +187,19 @@ export const latexCompletions = {
 export { autoCloseTags } from './auto-close-tags';
 export { snippets } from './completion';
 
-// LaTeX completion source is now imported from completion.ts
-// and re-exported here
-
 // Export the main LanguageSupport function
 export function latex(config: {
   autoCloseTags?: boolean,
   enableLinting?: boolean,
-  enableTooltips?: boolean
+  enableTooltips?: boolean,
+  enableAutocomplete?: boolean
 } = {}): LanguageSupport {
   // Default configuration
   const options = {
     autoCloseTags: true,
     enableLinting: true,
     enableTooltips: true,
+    enableAutocomplete: true,
     ...config
   };
 
@@ -212,11 +212,26 @@ export function latex(config: {
     })
   );
 
-  // Add bracket matching
+  // Add autocomplete extension
+  if (options.enableAutocomplete) {
+    extensions.push(autocompletion({
+      override: [latexCompletionSource],
+      defaultKeymap: true, // Make sure default keymaps are enabled
+      activateOnTyping: true, // Activate completion when typing
+      icons: true
+    }));
+    extensions.push(keymap.of(completionKeymap));
+  }
+
+  // Add bracket matching and auto-closing brackets
   extensions.push(latexBracketMatching);
+  extensions.push(closeBrackets());
 
   // Add keymap
-  extensions.push(keymap.of(latexKeymap));
+  extensions.push(keymap.of([
+    ...latexKeymap,
+    ...closeBracketsKeymap
+  ]));
 
   // Add optional extensions based on config
   if (options.autoCloseTags) {

@@ -30,3 +30,6 @@ export { snippets } from './completion';
 
 // Export the parser directly - using type assertion to bypass declaration file issue
 export { parser } from './parser-integration';
+
+// Export autocompletion components
+export { autocompletion, completionKeymap } from '@codemirror/autocomplete';

@@ -2,7 +2,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 
 // Import the LaTeX extension - webpack will resolve this from the parent directory
@@ -72,7 +72,8 @@ function createEditor() {
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
-      ...closeBracketsKeymap
+      ...closeBracketsKeymap,
+      ...completionKeymap
     ]),
 
     // Line wrapping is helpful for LaTeX
