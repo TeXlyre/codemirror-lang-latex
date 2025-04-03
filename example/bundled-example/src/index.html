@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeMirror 6 LaTeX Extension Demo</title>
+</head>
+<body>
+  <div class="container">
+    <h1>CodeMirror 6 LaTeX Extension Demo</h1>
+    <p>This demonstrates the LaTeX language support for CodeMirror 6.</p>
+
+    <div class="editor-container">
+      <div class="toolbar">
+        <button id="insertSection">Insert Section</button>
+        <button id="insertEnvironment">Insert Environment</button>
+        <button id="insertMath">Insert Math</button>
+      </div>
+      <div id="editor"></div>
+    </div>
+
+    <div class="options">
+      <label>
+        <input type="checkbox" id="autoCloseTags" checked> Auto-close tags
+      </label>
+      <label>
+        <input type="checkbox" id="enableLinting" checked> Enable linting
+      </label>
+      <label>
+        <input type="checkbox" id="enableTooltips" checked> Enable tooltips
+      </label>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{
+  "name": "codemirror-lang-latex",
+  "version": "0.1.0",
+  "description": "LaTeX language support for CodeMirror 6",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "style": "dist/latex.css",
+  "scripts": {
+    "generate-parser": "node scripts/generate-parser.cjs",
+    "build": "npm run generate-parser && tsc && rollup -c && cp src/latex.css dist/",
+    "prepare": "npm run build",
+    "setup-example": "cd example/bundled-example && npm install",
+    "example": "cd example/bundled-example && npm start"
+  },
+  "peerDependencies": {
+    "@codemirror/autocomplete": "^6.0.0",
+    "@codemirror/language": "^6.0.0",
+    "@codemirror/lint": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0"
+  },
+  "devDependencies": {
+    "@codemirror/autocomplete": "^6.0.0",
+    "@codemirror/language": "^6.0.0",
+    "@codemirror/lint": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@lezer/common": "^1.0.0",
+    "@lezer/highlight": "^1.0.0",
+    "@lezer/lr": "^1.0.0",
+    "@lezer/generator": "^1.0.0",
+
+    "rollup": "^2.70.0",
+    "rollup-plugin-dts": "^4.2.0",
+    "rollup-plugin-ts": "^3.0.2",
+    "typescript": "^4.6.2"
+  },
+
+  "files": [
+    "dist/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "codemirror",
+    "codemirror6",
+    "language",
+    "latex",
+    "lezer"
+  ],
+  "author": "",
+  "license": "MIT"
+}
