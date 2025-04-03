@@ -1,3 +1,4 @@
+// src/latex-language.ts
 import { parser } from './latex.mjs';
 import { LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
   foldInside, bracketMatching } from '@codemirror/language';

@@ -1,4 +1,4 @@
-// Export everything from the main LaTeX language file
+// src/index.ts
 export {
   latex,
   latexLanguage,

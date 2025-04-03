@@ -1,3 +1,4 @@
+// src/tokens.mjs
 /* Hand-written tokenizer for LaTeX. */
 
 import { ExternalTokenizer, ContextTracker } from '@lezer/lr'
