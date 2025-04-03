@@ -1,5 +1,5 @@
 // src/tooltips.ts
-import { EditorView, hoverTooltip, Tooltip } from '@codemirror/view';
+import { hoverTooltip, Tooltip } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
 import { SyntaxNode } from '@lezer/common';
 

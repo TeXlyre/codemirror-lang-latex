@@ -2,14 +2,12 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
+import {completionKeymap} from '@codemirror/autocomplete';
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 
 // Import the LaTeX extension - webpack will resolve this from the parent directory
-import { latex } from '../../../dist/index.js';
-// Import the LaTeX CSS
+import { latex } from '../../../dist';
 import '../../../dist/latex.css';
-// Import our styles
 import './styles.css';
 
 // Example LaTeX document
@@ -57,7 +55,8 @@ Also, we can use display math:
 let currentOptions = {
   autoCloseTags: true,
   enableLinting: true,
-  enableTooltips: true
+  enableTooltips: true,
+  autoCloseBrackets: false  // Disable auto-closing brackets as it interferes with with autoclosetags
 };
 
 function createEditor() {
@@ -67,12 +66,10 @@ function createEditor() {
     history(),
     highlightSelectionMatches(),
     syntaxHighlighting(defaultHighlightStyle),
-    closeBrackets(),
     keymap.of([
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
-      ...closeBracketsKeymap,
       ...completionKeymap
     ]),
 
@@ -118,6 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('enableTooltips').addEventListener('change', e => {
     currentOptions.enableTooltips = e.target.checked;
+    recreateEditor();
+  });
+
+  document.getElementById('autoCloseBrackets').addEventListener('change', e => {
+    currentOptions.autoCloseBrackets = e.target.checked;
     recreateEditor();
   });
 

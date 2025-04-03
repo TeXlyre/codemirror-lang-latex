@@ -1,6 +1,6 @@
 {
   "name": "latex-extension-demo",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.0",
   "description": "Demo for CodeMirror LaTeX extension",
   "main": "index.js",
   "scripts": {

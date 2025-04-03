@@ -12,5 +12,4 @@ export {
   findSectionBoundaries
 };
 
-// Re-export the parser for use in the language implementation
 export { parser };

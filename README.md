@@ -216,12 +216,26 @@ These can be useful for implementing custom extensions that interact with LaTeX 
 ## Building from Source
 
 ```bash
-git clone https://github.com/yourusername/codemirror-lang-latex.git
+git clone https://github.com/texlyre/codemirror-lang-latex.git
 cd codemirror-lang-latex
 npm install
 npm run build
 ```
 
+## Example
+You can find a live example of the LaTeX editor in action at [https://texlyre.github.io/codemirror-lang-latex/](https://texlyre.github.io/codemirror-lang-latex/).
+
+To run the example locally (as a webpack bundle), clone the repository and run:
+
+```bash
+npm install
+npm run setup-example
+npm run example
+```
+
+Then open `http://localhost:3000` in your browser.
+
+
 ## License
 
-MIT
+[MIT](LICENSE)

@@ -4,10 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
 import { SyntaxNode } from '@lezer/common';
 
-/**
- * Simple LaTeX linter for CodeMirror 6
- * Performs basic syntax checking and best practices validation
- */
+// Performs basic syntax checking and best practices validation
 export function latexLinter(options: {
   checkMissingDocumentEnv?: boolean,
   checkUnmatchedEnvironments?: boolean,
@@ -154,7 +151,6 @@ function findEnvName(node: any): SyntaxNode | null {
   // Look for the EnvNameGroup child
   let envNameGroup = null;
 
-  // Find EnvNameGroup among children
   for (let child = node.node.firstChild; child; child = child.nextSibling) {
     if (child.name === 'EnvNameGroup') {
       envNameGroup = child;
@@ -163,7 +159,6 @@ function findEnvName(node: any): SyntaxNode | null {
   }
 
   if (envNameGroup) {
-    // Try to find various environment name node types
     for (let child = envNameGroup.firstChild; child; child = child.nextSibling) {
       if (child.name === 'EnvName' ||
           child.name === 'DocumentEnvName' ||

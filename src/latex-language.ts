@@ -6,7 +6,7 @@ import { styleTags, tags as t } from '@lezer/highlight';
 import { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
-import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+import { closeBrackets } from '@codemirror/autocomplete';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
 import { latexCompletionSource } from './completion';
@@ -191,20 +191,20 @@ export function latex(config: {
   autoCloseTags?: boolean,
   enableLinting?: boolean,
   enableTooltips?: boolean,
-  enableAutocomplete?: boolean
+  enableAutocomplete?: boolean,
+  autoCloseBrackets?: boolean
 } = {}): LanguageSupport {
-  // Default configuration
   const options = {
     autoCloseTags: true,
     enableLinting: true,
     enableTooltips: true,
     enableAutocomplete: true,
+    autoCloseBrackets: true,
     ...config
   };
 
   const extensions = [];
 
-  // Add the language data with autocompletion
   extensions.push(
     latexLanguage.data.of({
       autocomplete: latexCompletionSource
@@ -222,13 +222,13 @@ export function latex(config: {
     extensions.push(keymap.of(completionKeymap));
   }
 
-  // Add bracket matching and auto-closing brackets
   extensions.push(latexBracketMatching);
-  extensions.push(closeBrackets());
 
-  // Add optional extensions based on config
+  if (options.autoCloseBrackets) {
+    extensions.push(closeBrackets());
+  }
+
   if (options.autoCloseTags) {
-    // Add all elements from the autoCloseTags array
     extensions.push(...autoCloseTags);
   }
 
