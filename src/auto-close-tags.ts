@@ -1,36 +1,89 @@
-import { EditorState, Transaction, ChangeSpec, EditorSelection } from '@codemirror/state';
-import { KeyBinding, Command } from '@codemirror/view';
+// src/auto-close-tags.ts
+import { EditorState, ChangeSpec, StateField, StateEffect } from '@codemirror/state';
+import { EditorView, keymap } from '@codemirror/view';
 
-// Function to check if we're at the end of a \begin command
-function isAfterBeginEnvironment(state: EditorState, pos: number): { name: string, start: number } | null {
-  const lineStart = state.doc.lineAt(pos).from;
-  const lineText = state.sliceDoc(lineStart, pos);
+// Effect to signal auto-closing
+const autoCloseEffect = StateEffect.define<{envName: string, pos: number}>();
 
-  // Look for \begin{envname} pattern
-  const beginMatch = /\\begin\{([^}]+)\}[ \t]*$/.exec(lineText);
-  if (beginMatch) {
-    const envName = beginMatch[1];
-    const startPos = lineStart + beginMatch.index;
-    return { name: envName, start: startPos };
+// Field to track auto-closing state
+export const autoCloseField = StateField.define<{active: boolean, lastEnv: string | null}>({
+  create: () => ({ active: false, lastEnv: null }),
+  update(value, tr) {
+    for (let e of tr.effects) {
+      if (e.is(autoCloseEffect)) {
+        return { active: true, lastEnv: e.value.envName };
+      }
+    }
+    return value;
+  }
+});
+
+// Extract environment name from \begin{envname}
+function getEnvironmentName(text: string): string | null {
+  const match = /\\begin\{([^}]+)\}/.exec(text);
+  return match ? match[1] : null;
+}
+
+// Check if cursor is after a \begin{envname}
+function isAfterBeginEnvironment(view: EditorView): { name: string, pos: number } | null {
+  const { state } = view;
+  const { main } = state.selection;
+  if (main.from !== main.to) return null;
+
+  const line = state.doc.lineAt(main.from);
+  const lineStart = line.from;
+  const lineText = line.text;
+
+  // Look for \begin{envname} pattern at the end of the line
+  const match = /\\begin\{([^}]+)\}[ \t]*$/.exec(lineText);
+  if (match) {
+    return { name: match[1], pos: main.from };
   }
 
   return null;
 }
 
-// Handler for the Enter key to auto-complete environments
-export const handleEnterInEnvironment: Command = (view) => {
-  const state = view.state;
-  const pos = state.selection.main.head;
-  const beginEnv = isAfterBeginEnvironment(state, pos);
+// Handle Enter key when after \begin{envname}
+export const handleEnterInEnvironment = (view: EditorView): boolean => {
+  const envInfo = isAfterBeginEnvironment(view);
+  if (!envInfo) return false;
 
-  if (beginEnv) {
-    // Insert a newline, then a tab (for indentation), then another newline, then \end{envname}
-    const indentation = '\t';
-    const endText = `\n${indentation}\n\\end{${beginEnv.name}}`;
+  // Create the content to insert
+  const indentation = "  "; // Two spaces for indentation
+  const content = `\n${indentation}\n\\end{${envInfo.name}}`;
 
+  // Dispatch transaction with both changes and the effect
+  view.dispatch({
+    changes: { from: envInfo.pos, insert: content },
+    selection: { anchor: envInfo.pos + indentation.length + 1 },
+    effects: [autoCloseEffect.of({ envName: envInfo.name, pos: envInfo.pos })]
+  });
+
+  return true;
+};
+
+// Handle closing brace to auto-complete environment
+export const handleCloseBrace = (view: EditorView): boolean => {
+  const { state } = view;
+  const { main } = state.selection;
+  if (main.from !== main.to) return false;
+
+  const lineStart = state.doc.lineAt(main.from).from;
+  const beforeCursor = state.sliceDoc(lineStart, main.from);
+
+  // Check if typing a closing brace to finish \begin{envname
+  const match = /\\begin\{([^}]*)$/.exec(beforeCursor);
+  if (match) {
+    const envName = match[1];
+
+    // Insert the closing brace and add the matching \end{envname}
     view.dispatch({
-      changes: { from: pos, insert: endText },
-      selection: { anchor: pos + indentation.length + 1 }
+      changes: [
+        { from: main.from, insert: "}" },
+        { from: main.from, insert: `\n\\end{${envName}}` }
+      ],
+      selection: { anchor: main.from + 1 },
+      effects: [autoCloseEffect.of({ envName, pos: main.from })]
     });
 
     return true;
@@ -39,73 +92,55 @@ export const handleEnterInEnvironment: Command = (view) => {
   return false;
 };
 
-// Auto-close tags extension implementation
-export const autoCloseTags = EditorState.transactionFilter.of(tr => {
-  if (!tr.isUserEvent("input.type")) return tr;
+// Create a custom extension that combines keymap and transaction filter
+export const autoCloseTags = [
+  autoCloseField,
 
-  const state = tr.startState;
-  const changes = tr.changes;
-  let newChanges: ChangeSpec[] = [];
-  let newSelection = tr.selection;
-  let modified = false;
+  // Key handlers
+  keymap.of([
+    { key: "Enter", run: handleEnterInEnvironment },
+    { key: "}", run: handleCloseBrace }
+  ]),
 
-  // Check if the user just typed a character that might trigger auto-completion
-  changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-    if (inserted.length === 1) {
-      const char = inserted.sliceString(0);
+  // Transaction filter for tracking and auto-completing
+  EditorState.transactionFilter.of(tr => {
+    if (!tr.isUserEvent("input.type")) return tr;
 
-      if (char === '\n') {
-        // Handle auto-completion after \begin
-        const docBefore = state.sliceDoc(0, fromA);
-        // Check if the previous line ended with \begin{envname}
-        const beginMatch = /\\begin\{([^}]+)\}[ \t]*$/.exec(docBefore);
+    const state = tr.startState;
+    const changes = tr.changes;
+    let newChanges: ChangeSpec[] = [];
+    let modified = false;
 
-        if (beginMatch) {
-          const envName = beginMatch[1];
-          // Insert indentation and \end at the appropriate location
-          const indentation = '\t';
-          const endText = `${indentation}\n\\end{${envName}}`;
+    // Check for auto-close opportunities
+    changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+      // Auto-close for } when typing after \begin{name
+      if (inserted.sliceString(0) === "}") {
+        const line = state.doc.lineAt(fromA);
+        const beforeCursor = state.sliceDoc(line.from, fromA);
 
-          newChanges.push({ from: toB, insert: endText });
-          newSelection = EditorSelection.single(toB + indentation.length);
-          modified = true;
-        }
-      } else if (char === '}') {
-        // Handle auto-completion of \end{} when closing a \begin{}
-        const lineStart = state.doc.lineAt(fromA).from;
-        const lineText = state.sliceDoc(lineStart, fromA);
+        const match = /\\begin\{([^}]+)$/.exec(beforeCursor);
+        if (match) {
+          const envName = match[1];
 
-        const beginMatch = /\\begin\{([^}]+)$/.exec(lineText);
-        if (beginMatch) {
-          const envName = beginMatch[1];
-          // Look ahead to see if there's already an end command
-          const restOfDoc = state.sliceDoc(toB);
-          const endPattern = new RegExp(`\\\\end\\{${envName}\\}`);
+          // Check if there's already a matching \end
+          const docText = state.sliceDoc();
+          const hasEnd = new RegExp(`\\\\end\\{${envName}\\}`).test(docText);
 
-          if (!endPattern.test(restOfDoc)) {
-            // Insert the \end command
-            const endText = `\n\\end{${envName}}`;
-
-            newChanges.push({ from: toB, insert: endText });
+          if (!hasEnd) {
+            newChanges.push({ from: toB, insert: `\n\\end{${envName}}` });
             modified = true;
           }
         }
       }
+    });
+
+    if (modified) {
+      return [tr, {
+        changes: newChanges,
+        userEvent: "input.auto-close"
+      }];
     }
-  });
 
-  if (modified) {
-    return [tr, {
-      changes: newChanges,
-      selection: newSelection,
-      userEvent: "auto.complete"
-    }];
-  }
-
-  return tr;
-});
-
-// Key bindings for LaTeX auto-completion
-export const latexKeymap: readonly KeyBinding[] = [
-  { key: "Enter", run: handleEnterInEnvironment }
+    return tr;
+  })
 ];

@@ -10,7 +10,7 @@ import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
 import { latexCompletionSource } from './completion';
-import { autoCloseTags, latexKeymap } from './auto-close-tags';
+import { autoCloseTags } from './auto-close-tags';
 import { latexLinter } from './linter';
 import { latexHoverTooltip } from './tooltips';
 
@@ -164,7 +164,6 @@ export const latexLanguage = LRLanguage.define({
 // Extension that provides LaTeX-specific functionality
 export const latexExtensions: Extension = [
   latexBracketMatching,
-  keymap.of(latexKeymap),
   autoCloseTags
 ];
 
@@ -188,7 +187,6 @@ export const latexCompletions = {
 export { autoCloseTags } from './auto-close-tags';
 export { snippets } from './completion';
 
-// Export the main LanguageSupport function
 export function latex(config: {
   autoCloseTags?: boolean,
   enableLinting?: boolean,
@@ -217,8 +215,8 @@ export function latex(config: {
   if (options.enableAutocomplete) {
     extensions.push(autocompletion({
       override: [latexCompletionSource],
-      defaultKeymap: true, // Make sure default keymaps are enabled
-      activateOnTyping: true, // Activate completion when typing
+      defaultKeymap: true,
+      activateOnTyping: true,
       icons: true
     }));
     extensions.push(keymap.of(completionKeymap));
@@ -228,15 +226,10 @@ export function latex(config: {
   extensions.push(latexBracketMatching);
   extensions.push(closeBrackets());
 
-  // Add keymap
-  extensions.push(keymap.of([
-    ...latexKeymap,
-    ...closeBracketsKeymap
-  ]));
-
   // Add optional extensions based on config
   if (options.autoCloseTags) {
-    extensions.push(autoCloseTags);
+    // Add all elements from the autoCloseTags array
+    extensions.push(...autoCloseTags);
   }
 
   if (options.enableLinting) {
