@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CodeMirror 6 LaTeX language support extension">
+  <title>CodeMirror 6 LaTeX Extension</title>
+</head>
+<body>
+  <header>
+    <h1>CodeMirror 6 LaTeX Extension</h1>
+    <div class="links">
+      <a href="https://github.com/texlyre/codemirror-lang-latex" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://www.npmjs.com/package/codemirror-lang-latex" target="_blank" rel="noopener noreferrer">npm</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="demo-container">
+      <h2>Interactive Demo</h2>
+      <p>Try out the LaTeX language support for CodeMirror 6 below.</p>
+
+      <div class="editor-container">
+        <div class="toolbar">
+          <button id="insertSection">Insert Section</button>
+          <button id="insertEnvironment">Insert Environment</button>
+          <button id="insertMath">Insert Math</button>
+        </div>
+        <div id="editor"></div>
+      </div>
+
+      <div class="options">
+        <label>
+          <input type="checkbox" id="autoCloseTags" checked> Auto-close tags
+        </label>
+        <label>
+          <input type="checkbox" id="enableLinting" checked> Enable linting
+        </label>
+        <label>
+          <input type="checkbox" id="enableTooltips" checked> Enable tooltips
+        </label>
+        <label>
+          <input type="checkbox" id="autoCloseBrackets"> Auto-close brackets
+        </label>
+      </div>
+    </section>
+
+    <section class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>LaTeX syntax highlighting</li>
+        <li>Auto-indentation for environments and groups</li>
+        <li>Code folding for environments and document sections</li>
+        <li>Bracket matching</li>
+        <li>Autocompletion for common LaTeX commands and environments</li>
+        <li>Snippets for common LaTeX structures</li>
+        <li>Auto-closing of environments</li>
+        <li>Hover tooltips with command and environment documentation</li>
+        <li>LaTeX-specific linting</li>
+      </ul>
+    </section>
+
+    <section class="installation">
+      <h2>Installation</h2>
+      <pre><code>npm install codemirror-lang-latex</code></pre>
+    </section>
+
+    <section class="usage">
+      <h2>Usage</h2>
+      <pre><code>import { EditorState, EditorView } from '@codemirror/basic-setup';
+import { latex } from 'codemirror-lang-latex';
+
+let editor = new EditorView({
+  state: EditorState.create({
+    doc: '\\documentclass{article}\n\\begin{document}\nHello, world!\n\\end{document}',
+    extensions: [
+      // ... other extensions
+      latex()
+    ]
+  }),
+  parent: document.querySelector('#editor')
+});</code></pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>MIT License &copy; 2025 Fares Abawi</p>
+  </footer>
+</body>
+</html>

@@ -222,10 +222,11 @@ npm install
 npm run build
 ```
 
-## Example
-You can find a live example of the LaTeX editor in action at [https://texlyre.github.io/codemirror-lang-latex/](https://texlyre.github.io/codemirror-lang-latex/).
+## Examples
 
-To run the example locally (as a webpack bundle), clone the repository and run:
+### Regular Example
+
+To run the webpack-bundled example locally, clone the repository and run:
 
 ```bash
 npm install
@@ -235,7 +236,14 @@ npm run example
 
 Then open `http://localhost:3000` in your browser.
 
+### GitHub Pages Example
 
-## License
+To run the GitHub Pages example locally, which is also deployed to the demo site:
 
-[MIT](LICENSE)
+```bash
+npm install
+npm run setup-pages-example
+npm run pages-example
+```
+
+This will also run on `http://localhost:3000` in your browser.

@@ -10,8 +10,11 @@
     "generate-parser": "node scripts/generate-parser.cjs",
     "build": "npm run generate-parser && tsc && rollup -c && cp src/latex.css dist/",
     "prepare": "npm run build",
+    "update-permissions": "node scripts/update-permissions.cjs",
     "setup-example": "cd example/webpack-bundled-example && npm install",
-    "example": "cd example/webpack-bundled-example && npm start"
+    "setup-pages-example": "npm run update-permissions && node scripts/setup-pages-example.cjs",
+    "example": "cd example/webpack-bundled-example && npm start",
+    "pages-example": "cd example/github-pages-example && npm start"
   },
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.0.0",

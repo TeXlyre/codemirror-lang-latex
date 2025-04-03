@@ -1,0 +1,377 @@
+:root {
+  --primary-color: #4CAF50;
+  --primary-color-hover: #45a049;
+  --text-color: #333;
+  --bg-color: #f5f5f5;
+  --card-color: white;
+  --border-color: #ddd;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+header, footer {
+  background-color: var(--primary-color);
+  color: white;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+footer {
+  margin-top: 2rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.links {
+  margin-top: 1rem;
+}
+
+.links a {
+  color: white;
+  margin: 0 0.5rem;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid white;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.links a:hover {
+  background-color: white;
+  color: var(--primary-color);
+}
+
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+section {
+  margin-bottom: 3rem;
+  background-color: var(--card-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  padding: 2rem;
+}
+
+h1, h2 {
+  margin-top: 0;
+}
+
+.editor-container {
+  margin: 1.5rem 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+button {
+  padding: 8px 16px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--primary-color-hover);
+}
+
+#editor {
+  height: 400px;
+  overflow: auto;
+}
+
+.options {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+pre {
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+ul {
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+.features li::marker {
+  color: var(--primary-color);
+}
+
+/* CodeMirror editor custom styles */
+.cm-content {
+  padding: 10px;
+}
+
+.cm-latex-tooltip {
+  max-width: 300px;
+}
+
+.cm-latex-tooltip-description {
+  margin-bottom: 6px;
+}
+
+.cm-latex-tooltip-syntax,
+.cm-latex-tooltip-example,
+.cm-latex-tooltip-package {
+  font-family: monospace;
+  margin-top: 4px;
+  font-size: 0.9em;
+}
+
+/* For small screens */
+@media (max-width: 600px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .options {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  section {
+    padding: 1rem;
+  }
+}
+
+/* LaTeX syntax highlighting for CodeMirror 6 */
+
+.cm-content {
+  white-space: pre-wrap;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* LaTeX specific syntax highlighting */
+.cm-ctrlSeq {
+  color: #0000cc;
+  font-weight: bold;
+}
+
+.cm-ctrlSym {
+  color: #0000cc;
+  font-weight: bold;
+}
+
+.cm-beginEnv,
+.cm-endEnv {
+  color: #008800;
+  font-weight: bold;
+}
+
+.cm-envName {
+  color: #990000;
+  font-weight: bold;
+}
+
+.cm-documentEnvName,
+.cm-tabularEnvName,
+.cm-equationEnvName,
+.cm-equationArrayEnvName,
+.cm-verbatimEnvName,
+.cm-tikzPictureEnvName,
+.cm-figureEnvName,
+.cm-listEnvName,
+.cm-tableEnvName {
+  color: #990000;
+  font-weight: bold;
+}
+
+.cm-comment {
+  color: #999988;
+  font-style: italic;
+}
+
+.cm-normal {
+  color: #333333;
+}
+
+.cm-whitespace {
+  /* No specific styling */
+}
+
+.cm-blankLine {
+  /* No specific styling */
+}
+
+.cm-mathChar,
+.cm-mathSpecialChar,
+.cm-number {
+  color: #0086b3;
+}
+
+.cm-group {
+  /* No specific styling */
+}
+
+.cm-math {
+  color: #0086b3;
+}
+
+.cm-dollar {
+  color: #0086b3;
+  font-weight: bold;
+}
+
+.cm-textArgument,
+.cm-shortTextArgument,
+.cm-longArg,
+.cm-shortArg,
+.cm-labelArgument,
+.cm-refArgument,
+.cm-bibKeyArgument,
+.cm-packageArgument {
+  color: #dd1144;
+}
+
+/* Tooltip styles */
+.cm-latex-tooltip {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 300px;
+  padding: 8px 12px;
+}
+
+.cm-latex-tooltip-description {
+  margin-bottom: 6px;
+}
+
+.cm-latex-tooltip-syntax,
+.cm-latex-tooltip-example,
+.cm-latex-tooltip-package {
+  font-family: monospace;
+  margin-top: 4px;
+  font-size: 12px;
+  background-color: #fff;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+/* Diagnostic styles (for linting) */
+.cm-diagnostic {
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.cm-diagnostic-error {
+  background-color: rgba(255, 0, 0, 0.1);
+  border-left: 2px solid #f00;
+}
+
+.cm-diagnostic-warning {
+  background-color: rgba(255, 255, 0, 0.1);
+  border-left: 2px solid #ff0;
+}
+
+.cm-diagnostic-info {
+  background-color: rgba(0, 0, 255, 0.1);
+  border-left: 2px solid #00f;
+}
+
+/* Active line highlight */
+.cm-activeLine {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Matching brackets */
+.cm-matchingBracket {
+  background-color: rgba(0, 255, 0, 0.2);
+  outline: 1px solid #0f0;
+}
+
+.cm-nonmatchingBracket {
+  background-color: rgba(255, 0, 0, 0.2);
+  outline: 1px solid #f00;
+}
+
+/* Selection */
+.cm-selectionBackground {
+  background-color: #d7d4f0;
+}
+
+/* Editor focus */
+.cm-editor.cm-focused {
+  outline: 2px solid #4CAF50;
+  outline-offset: -2px;
+}
+
+/* Code folding */
+.cm-foldPlaceholder {
+  background-color: #eee;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #888;
+  font-size: 10px;
+  margin: 0 1px;
+  padding: 0 1px;
+}
+
+/* Gutter */
+.cm-gutters {
+  background-color: #f8f8f8;
+  border-right: 1px solid #ddd;
+}
+
+.cm-lineNumbers .cm-gutterElement {
+  color: #999;
+  padding: 0 3px 0 5px;
+}
