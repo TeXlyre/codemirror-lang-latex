@@ -1,3 +1,4 @@
+// src/linter.ts
 import { Diagnostic } from '@codemirror/lint';
 import { EditorView } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';

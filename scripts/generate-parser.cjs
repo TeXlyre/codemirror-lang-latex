@@ -1,5 +1,6 @@
-// Script to generate the Lezer parser from grammar files
+// scripts/generate-parser.cjs
 
+// Script to generate the Lezer parser from grammar files
 const { buildParserFile } = require('@lezer/generator');
 const fs = require('fs');
 const path = require('path');

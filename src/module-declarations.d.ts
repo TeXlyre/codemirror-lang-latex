@@ -1,5 +1,6 @@
-// Type declarations for imported modules
+// src/module-declarations.d.ts
 
+// Type declarations for imported modules
 declare module './latex.mjs' {
   import { LRParser } from '@lezer/lr';
   export const parser: LRParser;

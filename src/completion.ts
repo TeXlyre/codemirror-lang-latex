@@ -1,5 +1,5 @@
+// src/completion.ts
 import { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
-import { SyntaxNode } from '@lezer/common';
 
 // Checks if we're at the beginning of an environment name within a \begin{} or \end{}
 function isInEnvironmentName(context: CompletionContext): boolean {
