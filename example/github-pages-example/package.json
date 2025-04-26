@@ -2,7 +2,7 @@
   "name": "latex-extension-demo-pages",
   "version": "0.1.0",
   "description": "GitHub Pages Demo for CodeMirror LaTeX extension",
-  "author": "Fares Abawi",
+  "author": "Fares Abawi <fares@abawi.me> (https://abawi.me)",
   "license": "MIT",
   "repository": {
     "type": "git",
