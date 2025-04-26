@@ -230,7 +230,7 @@ To run the webpack-bundled example locally, clone the repository and run:
 
 ```bash
 npm install
-npm run setup-example
+npm run build:example
 npm run example
 ```
 
@@ -242,7 +242,7 @@ To run the GitHub Pages example locally, which is also deployed to the demo site
 
 ```bash
 npm install
-npm run setup-pages-example
+npm run build:pages-example
 npm run pages-example
 ```
 
