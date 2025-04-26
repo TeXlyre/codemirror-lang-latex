@@ -22,13 +22,13 @@ Thank you for your interest in contributing to this project! This document provi
 
 4. Run the webpack example:
    ```
-   npm run setup-example
+   npm run build:example
    npm run example
    ```
 
 5. Run the GitHub Pages example:
    ```
-   npm run setup-pages-example
+   npm run build:pages-example
    npm run pages-example
    ```
 
