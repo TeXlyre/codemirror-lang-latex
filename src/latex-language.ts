@@ -14,9 +14,9 @@ import { autoCloseTags } from './auto-close-tags';
 import { latexLinter } from './linter';
 import { latexHoverTooltip } from './tooltips';
 
-// Simple bracket matching for LaTeX - declaring it early to avoid reference before definition
+// Simple bracket matching for LaTeX
 export const latexBracketMatching = bracketMatching({
-  brackets: "()[]{}"  // Use a string instead of array
+  brackets: "()[]{}"
 });
 
 export const latexLanguage = LRLanguage.define({
@@ -164,7 +164,7 @@ export const latexLanguage = LRLanguage.define({
 // Extension that provides LaTeX-specific functionality
 export const latexExtensions: Extension = [
   latexBracketMatching,
-  autoCloseTags
+  ...autoCloseTags
 ];
 
 // Import the environments, commands, packages from completion.ts
@@ -187,6 +187,7 @@ export const latexCompletions = {
 export { autoCloseTags } from './auto-close-tags';
 export { snippets } from './completion';
 
+// Provides LaTeX language support with configurable features
 export function latex(config: {
   autoCloseTags?: boolean,
   enableLinting?: boolean,
@@ -195,26 +196,26 @@ export function latex(config: {
   autoCloseBrackets?: boolean
 } = {}): LanguageSupport {
   const options = {
-    autoCloseTags: true,
-    enableLinting: true,
-    enableTooltips: true,
-    enableAutocomplete: true,
-    autoCloseBrackets: true,
-    ...config
+    ...config,
+    autoCloseTags: config.autoCloseTags ?? true,
+    enableLinting: config.enableLinting ?? true,
+    enableTooltips: config.enableTooltips ?? true,
+    enableAutocomplete: config.enableAutocomplete ?? true,
+    autoCloseBrackets: config.autoCloseBrackets ?? true
   };
 
   const extensions = [];
 
   extensions.push(
     latexLanguage.data.of({
-      autocomplete: latexCompletionSource
+      autocomplete: latexCompletionSource(options.autoCloseTags) // Call the function
     })
   );
 
   // Add autocomplete extension
   if (options.enableAutocomplete) {
     extensions.push(autocompletion({
-      override: [latexCompletionSource],
+      override: [latexCompletionSource(options.autoCloseTags)], // Call the function here too
       defaultKeymap: true,
       activateOnTyping: true,
       icons: true

@@ -152,7 +152,7 @@ export const packages: readonly string[] = [
 ];
 
 // Create environment completion with auto-closing and proper indentation
-function createEnvironmentCompletion(envName: string): Completion {
+function createEnvironmentCompletion(envName: string, autoCloseEnabled: boolean): Completion {
   return {
     label: envName,
     type: "class",
@@ -162,18 +162,25 @@ function createEnvironmentCompletion(envName: string): Completion {
       const beforeCursor = view.state.sliceDoc(line.from, from);
 
       if (/\\begin\{[^}]*$/.test(beforeCursor)) {
-        // We're inside \begin{}, add closing brace and environment
-        // Get current line indentation
+        // We're inside \begin{}, add closing brace
         const lineText = line.text;
         const indentMatch = lineText.match(/^(\s*)/);
         const currentIndentation = indentMatch ? indentMatch[1] : '';
         const innerIndentation = currentIndentation + "  ";
 
-        const content = `${envName}}\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
+        let insertContent = `${envName}}`;
+        let selectionAnchorOffset = 1; // For the closing '}'
+
+        if (autoCloseEnabled) { // ONLY insert \n...\end{} if autoCloseEnabled is true
+          insertContent += `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
+          selectionAnchorOffset += innerIndentation.length + 1; // Adjust for the newlines and indentation
+        }
+
         view.dispatch({
-          changes: { from, to, insert: content },
-          selection: { anchor: from + envName.length + 2 + innerIndentation.length } // Position inside environment
+          changes: { from, to, insert: insertContent },
+          selection: { anchor: from + envName.length + selectionAnchorOffset } // Position inside environment or after closing brace
         });
+
       } else if (/\\end\{[^}]*$/.test(beforeCursor)) {
         // We're inside \end{}, just add the name and closing brace
         view.dispatch({
@@ -181,7 +188,7 @@ function createEnvironmentCompletion(envName: string): Completion {
           selection: { anchor: from + envName.length + 1 }
         });
       } else {
-        // Default behavior
+        // Default behavior: just insert the environment name
         view.dispatch({
           changes: { from, to, insert: envName },
           selection: { anchor: from + envName.length }
@@ -193,9 +200,8 @@ function createEnvironmentCompletion(envName: string): Completion {
 }
 
 // Create command completion with environment auto-closing
-function createCommandCompletion(cmd: string): Completion {
+function createCommandCompletion(cmd: string, autoCloseEnabled: boolean): Completion {
   if (cmd.startsWith('\\begin{')) {
-    // Extract environment name and create environment completion
     const envMatch = cmd.match(/\\begin\{([^}]+)\}/);
     if (envMatch) {
       const envName = envMatch[1];
@@ -210,10 +216,17 @@ function createCommandCompletion(cmd: string): Completion {
           const currentIndentation = indentMatch ? indentMatch[1] : '';
           const innerIndentation = currentIndentation + "  ";
 
-          const content = `\\begin{${envName}}\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
+          let content = `\\begin{${envName}}`;
+          let selectionAnchorOffset = cmd.length;
+
+          if (autoCloseEnabled) { // ONLY insert \n...\end{} if autoCloseEnabled is true
+            content += `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
+            selectionAnchorOffset += 1 + innerIndentation.length; // Adjust for newlines and indentation
+          }
+
           view.dispatch({
             changes: { from, to, insert: content },
-            selection: { anchor: from + cmd.length + 1 + innerIndentation.length } // Position inside environment
+            selection: { anchor: from + selectionAnchorOffset } // Position inside environment or after begin tag
           });
         },
         boost: 1
@@ -301,65 +314,67 @@ export const snippets: readonly Completion[] = [
 ];
 
 // Main completion function that provides autocomplete suggestions based on context
-export function latexCompletionSource(context: CompletionContext): CompletionResult | null {
-  // Broaden the matching pattern for better detection
-  if (!context.explicit) {
-    const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);
-    if (!before || before.from === before.to) {
-      return null;
-    }
-  }
-
-  // Check if we're in an environment name
-  if (isInEnvironmentName(context)) {
-    const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z]*)$/);
-    if (envMatch) {
-      const options = environments.map(env => createEnvironmentCompletion(env));
-
-      return {
-        from: envMatch.from + envMatch.text.lastIndexOf('{') + 1,
-        options,
-        validFor: /^[a-zA-Z*]*$/
-      };
-    }
-  }
-
-  // Check if we're in a command name
-  if (isInCommandName(context)) {
-    const cmdMatch = context.matchBefore(/\\([a-zA-Z]*)$/);
-    if (cmdMatch) {
-      let options: Completion[] = commands.map(cmd => createCommandCompletion(cmd));
-
-      // Add math commands if in math mode
-      if (isInMathMode(context)) {
-        options = [...options, ...mathCommands.map(cmd => createCommandCompletion(cmd))];
+export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
+  return function(context: CompletionContext): CompletionResult | null {
+    // Broaden the matching pattern for better detection
+    if (!context.explicit) {
+      const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);
+      if (!before || before.from === before.to) {
+        return null;
       }
+    }
 
-      // Add snippets to the commands
-      options = [...options, ...snippets];
+    // Check if we're in an environment name
+    if (isInEnvironmentName(context)) {
+      const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z]*)$/);
+      if (envMatch) {
+        const options = environments.map(env => createEnvironmentCompletion(env, autoCloseTagsEnabled));
 
+        return {
+          from: envMatch.from + envMatch.text.lastIndexOf('{') + 1,
+          options,
+          validFor: /^[a-zA-Z*]*$/
+        };
+      }
+    }
+
+    // Check if we're in a command name
+    if (isInCommandName(context)) {
+      const cmdMatch = context.matchBefore(/\\([a-zA-Z]*)$/);
+      if (cmdMatch) {
+        let options: Completion[] = commands.map(cmd => createCommandCompletion(cmd, autoCloseTagsEnabled));
+
+        // Add math commands if in math mode
+        if (isInMathMode(context)) {
+          options = [...options, ...mathCommands.map(cmd => createCommandCompletion(cmd, autoCloseTagsEnabled))];
+        }
+
+        // Add snippets to the commands
+        options = [...options, ...snippets];
+
+        return {
+          from: cmdMatch.from,
+          options,
+          validFor: /^\\?[a-zA-Z]*$/
+        };
+      }
+    }
+
+    // Check if we're after \usepackage{
+    const packageMatch = context.matchBefore(/\\usepackage(\[\S*\])?\{([a-zA-Z,]*)$/);
+    if (packageMatch) {
       return {
-        from: cmdMatch.from,
-        options,
-        validFor: /^\\?[a-zA-Z]*$/
+        from: packageMatch.from + packageMatch.text.lastIndexOf('{') + 1,
+        options: packages.map(pkg => ({
+          label: pkg,
+          type: "constant",
+          apply: pkg,
+          boost: 1
+        })),
+        validFor: /^[a-zA-Z,]*$/
       };
     }
-  }
 
-  // Check if we're after \usepackage{
-  const packageMatch = context.matchBefore(/\\usepackage(\[\S*\])?\{([a-zA-Z,]*)$/);
-  if (packageMatch) {
-    return {
-      from: packageMatch.from + packageMatch.text.lastIndexOf('{') + 1,
-      options: packages.map(pkg => ({
-        label: pkg,
-        type: "constant",
-        apply: pkg,
-        boost: 1
-      })),
-      validFor: /^[a-zA-Z,]*$/
-    };
-  }
-
-  return null;
+    return null;
+  };
 }
