@@ -12,10 +12,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "style": "dist/latex.css",
   "scripts": {
     "generate-parser": "node scripts/generate-parser.cjs",
-    "build": "npm run generate-parser && tsc && rollup -c && cp src/latex.css dist/",
+    "build": "npm run generate-parser && tsc && rollup -c",
     "prepare": "npm run build",
     "update-permissions": "node scripts/update-permissions.cjs",
     "build:example": "cd example/webpack-bundled-example && npm install",

@@ -83,15 +83,4 @@ generateParser();
 EOF
 fi
 
-# Add placeholder CSS file if needed
-if [ ! -f "src/latex.css" ]; then
-  mkdir -p src
-  echo "Creating placeholder src/latex.css"
-  cat > src/latex.css << 'EOF'
-/* LaTeX syntax highlighting for CodeMirror 6 */
-
-/* This file will be overwritten during the build process */
-EOF
-fi
-
 echo "Setup complete. You can now run: npm install"

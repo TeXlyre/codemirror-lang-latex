@@ -7,7 +7,6 @@ import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 
 // Import the LaTeX extension from a relative path to access the built package
 import { latex } from '../../..';
-import '../../../dist/latex.css';
 import './styles.css';
 
 // Example LaTeX document

@@ -7,7 +7,6 @@ import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 
 // Import the LaTeX extension - webpack will resolve this from the parent directory
 import { latex } from '../../../dist';
-import '../../../dist/latex.css';
 import './styles.css';
 
 // Example LaTeX document

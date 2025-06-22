@@ -158,37 +158,119 @@ export const snippets: readonly Completion[] = [
     type: "keyword",
     detail: "LaTeX environment",
     info: "Create a LaTeX environment",
-    apply: "\\begin{${0:environment}}\n\t$1\n\\end{${0:environment}}",
+    apply: (view, completion, from, to) => {
+      view.dispatch({
+        changes: { from, to, insert: "\\begin{}" },
+        selection: { anchor: from + 7 }
+      });
+    },
   },
   {
     label: "\\section{...}",
     type: "keyword",
     detail: "LaTeX section",
     info: "Create a section",
-    apply: "\\section{${0:title}}",
+    apply: "\\section{}",
   },
   {
     label: "\\subsection{...}",
     type: "keyword",
     detail: "LaTeX subsection",
     info: "Create a subsection",
-    apply: "\\subsection{${0:title}}",
+    apply: "\\subsection{}",
   },
   {
     label: "\\begin{figure}",
     type: "keyword",
     detail: "LaTeX figure environment",
     info: "Create a figure environment",
-    apply: "\\begin{figure}[${0:htbp}]\n\t\\centering\n\t\\includegraphics[width=${1:0.8}\\textwidth]{${2:filename}}\n\t\\caption{${3:caption}}\n\t\\label{fig:${4:label}}\n\\end{figure}",
+    apply: (view, completion, from, to) => {
+      const content = "\\begin{figure}[htbp]\n  \\centering\n  \\includegraphics[width=0.8\\textwidth]{}\n  \\caption{}\n  \\label{fig:}\n\\end{figure}";
+      view.dispatch({
+        changes: { from, to, insert: content },
+        selection: { anchor: from + content.indexOf("{}") }
+      });
+    },
   },
   {
     label: "\\begin{table}",
     type: "keyword",
     detail: "LaTeX table environment",
     info: "Create a table environment",
-    apply: "\\begin{table}[${0:htbp}]\n\t\\centering\n\t\\begin{tabular}{${1:ccc}}\n\t\t${2:header1} & ${3:header2} & ${4:header3} \\\\\n\t\t\\hline\n\t\t${5:data1} & ${6:data2} & ${7:data3} \\\\\n\t\t${8:data4} & ${9:data5} & ${10:data6} \\\\\n\t\\end{tabular}\n\t\\caption{${11:caption}}\n\t\\label{tab:${12:label}}\n\\end{table}",
+    apply: (view, completion, from, to) => {
+      const content = "\\begin{table}[htbp]\n  \\centering\n  \\begin{tabular}{ccc}\n    header1 & header2 & header3 \\\\\n    \\hline\n    data1 & data2 & data3 \\\\\n  \\end{tabular}\n  \\caption{}\n  \\label{tab:}\n\\end{table}";
+      view.dispatch({
+        changes: { from, to, insert: content },
+        selection: { anchor: from + content.indexOf("{}") }
+      });
+    },
   }
 ];
+
+// Helper function to create environment completion with auto-closing
+function createEnvironmentCompletion(envName: string): Completion {
+  return {
+    label: envName,
+    type: "class",
+    apply: (view, completion, from, to) => {
+      // Check if we're completing inside \begin{} or \end{}
+      const line = view.state.doc.lineAt(from);
+      const beforeCursor = view.state.sliceDoc(line.from, from);
+
+      if (/\\begin\{[^}]*$/.test(beforeCursor)) {
+        // We're inside \begin{}, add closing brace and environment
+        const content = `${envName}}\n  \n\\end{${envName}}`;
+        view.dispatch({
+          changes: { from, to, insert: content },
+          selection: { anchor: from + envName.length + 3 } // Position after }\n
+        });
+      } else if (/\\end\{[^}]*$/.test(beforeCursor)) {
+        // We're inside \end{}, just add the name and closing brace
+        view.dispatch({
+          changes: { from, to, insert: `${envName}}` },
+          selection: { anchor: from + envName.length + 1 }
+        });
+      } else {
+        // Default behavior
+        view.dispatch({
+          changes: { from, to, insert: envName },
+          selection: { anchor: from + envName.length }
+        });
+      }
+    },
+    boost: 1
+  };
+}
+
+// Helper function to create command completion
+function createCommandCompletion(cmd: string): Completion {
+  if (cmd.startsWith('\\begin{')) {
+    // Extract environment name and create environment completion
+    const envMatch = cmd.match(/\\begin\{([^}]+)\}/);
+    if (envMatch) {
+      const envName = envMatch[1];
+      return {
+        label: cmd,
+        type: "function",
+        apply: (view, completion, from, to) => {
+          const content = `\\begin{${envName}}\n  \n\\end{${envName}}`;
+          view.dispatch({
+            changes: { from, to, insert: content },
+            selection: { anchor: from + cmd.length + 2 } // Position after \begin{env}\n
+          });
+        },
+        boost: 1
+      };
+    }
+  }
+
+  return {
+    label: cmd,
+    type: "function",
+    apply: cmd,
+    boost: 1
+  };
+}
 
 // Main completion function that provides autocomplete suggestions based on context
 export function latexCompletionSource(context: CompletionContext): CompletionResult | null {
@@ -204,12 +286,7 @@ export function latexCompletionSource(context: CompletionContext): CompletionRes
   if (isInEnvironmentName(context)) {
     const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z]*)$/);
     if (envMatch) {
-      const options = environments.map(env => ({
-        label: env,
-        type: "class",
-        apply: env,
-        boost: 1
-      }));
+      const options = environments.map(env => createEnvironmentCompletion(env));
 
       return {
         from: envMatch.from + envMatch.text.lastIndexOf('{') + 1,
@@ -223,25 +300,11 @@ export function latexCompletionSource(context: CompletionContext): CompletionRes
   if (isInCommandName(context)) {
     const cmdMatch = context.matchBefore(/\\([a-zA-Z]*)$/);
     if (cmdMatch) {
-      let options: Completion[] = commands.map(cmd => ({
-        label: cmd,
-        type: "function",
-        apply: cmd.startsWith('\\begin{') ?
-          cmd + '\n\t\n\\end' + cmd.substring(6) :
-          cmd,
-        boost: 1
-      }));
+      let options: Completion[] = commands.map(cmd => createCommandCompletion(cmd));
 
       // Add math commands if in math mode
       if (isInMathMode(context)) {
-        options = [...options, ...mathCommands.map(cmd => ({
-          label: cmd,
-          type: "function",
-          apply: cmd.startsWith('\\begin{') ?
-            cmd + '\n\t\n\\end' + cmd.substring(6) :
-            cmd,
-          boost: 1
-        }))];
+        options = [...options, ...mathCommands.map(cmd => createCommandCompletion(cmd))];
       }
 
       // Add snippets to the commands

@@ -142,14 +142,6 @@ A collection of LaTeX-related snippets for common structures.
 import { snippets } from 'codemirror-lang-latex';
 ```
 
-### Styling
-
-The package includes CSS styles for syntax highlighting in `dist/latex.css`. Import these styles to get the default LaTeX syntax highlighting:
-
-```javascript
-import 'codemirror-lang-latex/dist/latex.css';
-```
-
 You can also customize styles in your own CSS.
 
 ## Advanced Usage

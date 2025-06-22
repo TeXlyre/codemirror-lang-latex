@@ -80,9 +80,9 @@ export const handleCloseBrace = (view: EditorView): boolean => {
     view.dispatch({
       changes: [
         { from: main.from, insert: "}" },
-        { from: main.from, insert: `\n\\end{${envName}}` }
+        { from: main.from, insert: `\n  \n\\end{${envName}}` }
       ],
-      selection: { anchor: main.from + 1 },
+      selection: { anchor: main.from + 3 }, // Position after }\n and indentation
       effects: [autoCloseEffect.of({ envName, pos: main.from })]
     });
 
@@ -102,34 +102,34 @@ export const autoCloseTags = [
     { key: "}", run: handleCloseBrace }
   ]),
 
-  // Transaction filter for tracking and auto-completing
+  // Transaction filter for tracking completions that should trigger auto-closing
   EditorState.transactionFilter.of(tr => {
-    if (!tr.isUserEvent("input.type")) return tr;
+    if (!tr.isUserEvent("input")) return tr;
 
     const state = tr.startState;
     const changes = tr.changes;
     let newChanges: ChangeSpec[] = [];
     let modified = false;
 
-    // Check for auto-close opportunities
+    // Check for environment completions that need auto-closing
     changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-      // Auto-close for } when typing after \begin{name
-      if (inserted.sliceString(0) === "}") {
-        const line = state.doc.lineAt(fromA);
-        const beforeCursor = state.sliceDoc(line.from, fromA);
+      const insertedText = inserted.sliceString(0);
 
-        const match = /\\begin\{([^}]+)$/.exec(beforeCursor);
-        if (match) {
-          const envName = match[1];
+      // Check if this looks like a \begin{env} that was just inserted via completion
+      const beginMatch = /\\begin\{([^}]+)\}$/.exec(insertedText);
+      if (beginMatch && tr.isUserEvent("input.complete")) {
+        const envName = beginMatch[1];
 
-          // Check if there's already a matching \end
-          const docText = state.sliceDoc();
-          const hasEnd = new RegExp(`\\\\end\\{${envName}\\}`).test(docText);
+        // Check if there's already a matching \end
+        const docText = state.sliceDoc();
+        const hasEnd = new RegExp(`\\\\end\\{${envName}\\}`).test(docText);
 
-          if (!hasEnd) {
-            newChanges.push({ from: toB, insert: `\n\\end{${envName}}` });
-            modified = true;
-          }
+        if (!hasEnd) {
+          newChanges.push({
+            from: toB,
+            insert: `\n  \n\\end{${envName}}`
+          });
+          modified = true;
         }
       }
     });
@@ -137,6 +137,7 @@ export const autoCloseTags = [
     if (modified) {
       return [tr, {
         changes: newChanges,
+        selection: { anchor: tr.selection?.main.anchor || state.selection.main.anchor + 2 },
         userEvent: "input.auto-close"
       }];
     }
