@@ -1,5 +1,5 @@
 // src/auto-close-tags.ts
-import { EditorState, ChangeSpec, StateField, StateEffect } from '@codemirror/state';
+import { EditorState, ChangeSpec, StateField, StateEffect, EditorSelection } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 
 // Effect to signal auto-closing
@@ -24,6 +24,14 @@ function getEnvironmentName(text: string): string | null {
   return match ? match[1] : null;
 }
 
+// Get the indentation of the current line
+function getCurrentLineIndentation(view: EditorView, pos: number): string {
+  const line = view.state.doc.lineAt(pos);
+  const lineText = line.text;
+  const match = lineText.match(/^(\s*)/);
+  return match ? match[1] : '';
+}
+
 // Check if cursor is after a \begin{envname}
 function isAfterBeginEnvironment(view: EditorView): { name: string, pos: number } | null {
   const { state } = view;
@@ -31,7 +39,6 @@ function isAfterBeginEnvironment(view: EditorView): { name: string, pos: number 
   if (main.from !== main.to) return null;
 
   const line = state.doc.lineAt(main.from);
-  const lineStart = line.from;
   const lineText = line.text;
 
   // Look for \begin{envname} pattern at the end of the line
@@ -48,14 +55,17 @@ export const handleEnterInEnvironment = (view: EditorView): boolean => {
   const envInfo = isAfterBeginEnvironment(view);
   if (!envInfo) return false;
 
+  // Get the indentation of the current line
+  const currentIndentation = getCurrentLineIndentation(view, envInfo.pos);
+  const innerIndentation = currentIndentation + "  "; // Add two spaces for content
+
   // Create the content to insert
-  const indentation = "  "; // Two spaces for indentation
-  const content = `\n${indentation}\n\\end{${envInfo.name}}`;
+  const content = `\n${innerIndentation}\n${currentIndentation}\\end{${envInfo.name}}`;
 
   // Dispatch transaction with both changes and the effect
   view.dispatch({
     changes: { from: envInfo.pos, insert: content },
-    selection: { anchor: envInfo.pos + indentation.length + 1 },
+    selection: { anchor: envInfo.pos + innerIndentation.length + 1 },
     effects: [autoCloseEffect.of({ envName: envInfo.name, pos: envInfo.pos })]
   });
 
@@ -76,13 +86,17 @@ export const handleCloseBrace = (view: EditorView): boolean => {
   if (match) {
     const envName = match[1];
 
+    // Get the indentation of the current line
+    const currentIndentation = getCurrentLineIndentation(view, main.from);
+    const innerIndentation = currentIndentation + "  "; // Add two spaces for content
+
     // Insert the closing brace and add the matching \end{envname}
     view.dispatch({
       changes: [
         { from: main.from, insert: "}" },
-        { from: main.from, insert: `\n  \n\\end{${envName}}` }
+        { from: main.from, insert: `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}` }
       ],
-      selection: { anchor: main.from + 3 }, // Position after }\n and indentation
+      selection: { anchor: main.from + innerIndentation.length + 2 }, // Position after }\n and indentation
       effects: [autoCloseEffect.of({ envName, pos: main.from })]
     });
 
@@ -109,6 +123,7 @@ export const autoCloseTags = [
     const state = tr.startState;
     const changes = tr.changes;
     let newChanges: ChangeSpec[] = [];
+    let newSelection = tr.selection;
     let modified = false;
 
     // Check for environment completions that need auto-closing
@@ -125,10 +140,20 @@ export const autoCloseTags = [
         const hasEnd = new RegExp(`\\\\end\\{${envName}\\}`).test(docText);
 
         if (!hasEnd) {
+          // Get the indentation of the line where the \begin was inserted
+          const line = state.doc.lineAt(fromA);
+          const lineText = line.text;
+          const indentMatch = lineText.match(/^(\s*)/);
+          const currentIndentation = indentMatch ? indentMatch[1] : '';
+          const innerIndentation = currentIndentation + "  ";
+
           newChanges.push({
             from: toB,
-            insert: `\n  \n\\end{${envName}}`
+            insert: `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`
           });
+
+          // Set cursor position inside the environment
+          newSelection = EditorSelection.single(toB + innerIndentation.length + 1);;
           modified = true;
         }
       }
@@ -137,7 +162,7 @@ export const autoCloseTags = [
     if (modified) {
       return [tr, {
         changes: newChanges,
-        selection: { anchor: tr.selection?.main.anchor || state.selection.main.anchor + 2 },
+        selection: newSelection,
         userEvent: "input.auto-close"
       }];
     }
