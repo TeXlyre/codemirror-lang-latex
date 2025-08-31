@@ -1,6 +1,6 @@
 {
   "name": "latex-extension-demo-pages",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Pages Demo for CodeMirror LaTeX extension",
   "author": "Fares Abawi <fares@abawi.me> (https://abawi.me)",
   "license": "MIT",
@@ -24,12 +24,12 @@
     "@codemirror/search": "^6.0.0"
   },
   "devDependencies": {
-    "copy-webpack-plugin": "^11.0.0",
+    "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^6.5.1",
     "html-webpack-plugin": "^5.5.0",
     "style-loader": "^3.3.1",
-    "webpack": "^5.65.0",
-    "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.7.2"
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }

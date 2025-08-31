@@ -10,7 +10,9 @@ module.exports = {
     clean: true
   },
   devServer: {
-    static: './dist',
+    static: {
+      directory: path.join(__dirname, 'dist'),
+    },
     hot: true,
     port: 3000
   },
