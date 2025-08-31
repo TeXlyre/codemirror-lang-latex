@@ -3,16 +3,18 @@ import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirro
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { completionKeymap } from '@codemirror/autocomplete';
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap } from '@codemirror/language';
 
 // Import the LaTeX extension from a relative path to access the built package
 import { latex } from '../../..';
 import './styles.css';
 
 // Example LaTeX document
-const initialDoc = `\\documentclass{article}
+const initialDoc = `% { You can also collapse this block up until '% }'
+\\documentclass{article}
 \\usepackage{amsmath}
 \\usepackage{graphicx}
+% }
 
 \\title{CodeMirror LaTeX Extension Demo}
 \\author{LaTeX Editor Example}
@@ -85,6 +87,7 @@ function createEditor() {
   const extensions = [
     lineNumbers(),
     highlightActiveLine(),
+    foldGutter(),
     history(),
     highlightSelectionMatches(),
     syntaxHighlighting(defaultHighlightStyle),
@@ -92,7 +95,8 @@ function createEditor() {
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
-      ...completionKeymap
+      ...completionKeymap,
+        ...foldKeymap
     ]),
 
     // Line wrapping is helpful for LaTeX

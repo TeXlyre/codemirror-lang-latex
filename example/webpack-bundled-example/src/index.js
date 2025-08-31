@@ -3,16 +3,18 @@ import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirro
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import {completionKeymap} from '@codemirror/autocomplete';
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap } from '@codemirror/language';
 
 // Import the LaTeX extension - webpack will resolve this from the parent directory
 import { latex } from '../../../dist';
 import './styles.css';
 
 // Example LaTeX document
-const initialDoc = `\\documentclass{article}
+const initialDoc = `% { You can also collapse this block up until '% }'
+\\documentclass{article}
 \\usepackage{amsmath}
 \\usepackage{graphicx}
+% }
 
 \\title{Example Document}
 \\author{Your Name}
@@ -61,6 +63,7 @@ let currentOptions = {
 function createEditor() {
   const extensions = [
     lineNumbers(),
+    foldGutter(),
     highlightActiveLine(),
     history(),
     highlightSelectionMatches(),
@@ -69,7 +72,8 @@ function createEditor() {
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,
-      ...completionKeymap
+      ...completionKeymap,
+        ...foldKeymap
     ]),
 
     // Line wrapping is helpful for LaTeX

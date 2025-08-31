@@ -1,7 +1,7 @@
 // src/latex-language.ts
 import { parser } from './latex.mjs';
 import { LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
-  foldInside, bracketMatching } from '@codemirror/language';
+  foldInside, foldService, bracketMatching } from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
 import { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
@@ -18,6 +18,27 @@ import { latexHoverTooltip } from './tooltips';
 export const latexBracketMatching = bracketMatching({
   brackets: "()[]{}"
 });
+
+function commentFoldRanges(state: any, lineStart: number, lineEnd: number) {
+  const doc = state.doc;
+  const startLine = doc.lineAt(lineStart);
+
+  // Check if the start line contains `% {`
+  if (startLine.text.startsWith('% {')) {
+    // Look for matching `% }`
+    for (let lineNo = startLine.number + 1; lineNo <= doc.lines; lineNo++) {
+      const line = doc.line(lineNo);
+      if (line.text.trim() === '% }') {
+        return {
+          from: startLine.to,
+          to: line.to -1
+        };
+      }
+    }
+  }
+
+  return null;
+}
 
 export const latexLanguage = LRLanguage.define({
   parser: parser.configure({
@@ -208,14 +229,16 @@ export function latex(config: {
 
   extensions.push(
     latexLanguage.data.of({
-      autocomplete: latexCompletionSource(options.autoCloseTags) // Call the function
+      autocomplete: latexCompletionSource(options.autoCloseTags)
     })
   );
+  // Add fold service for comments
+  extensions.push(foldService.of(commentFoldRanges));
 
   // Add autocomplete extension
   if (options.enableAutocomplete) {
     extensions.push(autocompletion({
-      override: [latexCompletionSource(options.autoCloseTags)], // Call the function here too
+      override: [latexCompletionSource(options.autoCloseTags)],
       defaultKeymap: true,
       activateOnTyping: true,
       icons: true
