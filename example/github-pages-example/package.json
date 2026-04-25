@@ -10,6 +10,9 @@
   },
   "homepage": "https://texlyre.github.io/codemirror-lang-latex/",
   "private": true,
+  "overrides": {
+    "uuid": "^14.0.0"
+  },
   "scripts": {
     "build": "webpack --mode production",
     "start": "webpack serve --mode development"

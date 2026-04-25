@@ -1,5 +1,5 @@
 // rollup.config.js
-import typescript from 'rollup-plugin-ts'
+import typescript from '@rollup/plugin-typescript'
 import dts from 'rollup-plugin-dts'
 
 export default [
@@ -21,7 +21,12 @@ export default [
       '@lezer/lr',
       'tslib'
     ],
-    plugins: [typescript()]
+    plugins: [
+      typescript({
+        sourceMap: true,
+        inlineSources: true
+      })
+    ]
   },
   {
     input: 'src/index.ts',
