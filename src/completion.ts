@@ -157,38 +157,37 @@ function createEnvironmentCompletion(envName: string, autoCloseEnabled: boolean)
     label: envName,
     type: "class",
     apply: (view, completion, from, to) => {
-      // Check if we're completing inside \begin{} or \end{}
       const line = view.state.doc.lineAt(from);
       const beforeCursor = view.state.sliceDoc(line.from, from);
+      const nextChar = view.state.sliceDoc(to, to + 1);
+      const hasExistingCloseBrace = nextChar === "}";
+      const effectiveTo = hasExistingCloseBrace ? to + 1 : to;
 
       if (/\\begin\{[^}]*$/.test(beforeCursor)) {
-        // We're inside \begin{}, add closing brace
         const lineText = line.text;
         const indentMatch = lineText.match(/^(\s*)/);
         const currentIndentation = indentMatch ? indentMatch[1] : '';
         const innerIndentation = currentIndentation + "  ";
 
         let insertContent = `${envName}}`;
-        let selectionAnchorOffset = 1; // For the closing '}'
+        let selectionAnchorOffset = 1;
 
-        if (autoCloseEnabled) { // ONLY insert \n...\end{} if autoCloseEnabled is true
+        if (autoCloseEnabled) {
           insertContent += `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
-          selectionAnchorOffset += innerIndentation.length + 1; // Adjust for the newlines and indentation
+          selectionAnchorOffset += innerIndentation.length + 1;
         }
 
         view.dispatch({
-          changes: { from, to, insert: insertContent },
-          selection: { anchor: from + envName.length + selectionAnchorOffset } // Position inside environment or after closing brace
+          changes: { from, to: effectiveTo, insert: insertContent },
+          selection: { anchor: from + envName.length + selectionAnchorOffset }
         });
 
       } else if (/\\end\{[^}]*$/.test(beforeCursor)) {
-        // We're inside \end{}, just add the name and closing brace
         view.dispatch({
-          changes: { from, to, insert: `${envName}}` },
+          changes: { from, to: effectiveTo, insert: `${envName}}` },
           selection: { anchor: from + envName.length + 1 }
         });
       } else {
-        // Default behavior: just insert the environment name
         view.dispatch({
           changes: { from, to, insert: envName },
           selection: { anchor: from + envName.length }
@@ -209,24 +208,25 @@ function createCommandCompletion(cmd: string, autoCloseEnabled: boolean): Comple
         label: cmd,
         type: "function",
         apply: (view, completion, from, to) => {
-          // Get current line indentation
           const line = view.state.doc.lineAt(from);
           const lineText = line.text;
           const indentMatch = lineText.match(/^(\s*)/);
           const currentIndentation = indentMatch ? indentMatch[1] : '';
           const innerIndentation = currentIndentation + "  ";
+          const nextChar = view.state.sliceDoc(to, to + 1);
+          const effectiveTo = nextChar === "}" ? to + 1 : to;
 
           let content = `\\begin{${envName}}`;
           let selectionAnchorOffset = cmd.length;
 
-          if (autoCloseEnabled) { // ONLY insert \n...\end{} if autoCloseEnabled is true
+          if (autoCloseEnabled) {
             content += `\n${innerIndentation}\n${currentIndentation}\\end{${envName}}`;
-            selectionAnchorOffset += 1 + innerIndentation.length; // Adjust for newlines and indentation
+            selectionAnchorOffset += 1 + innerIndentation.length;
           }
 
           view.dispatch({
-            changes: { from, to, insert: content },
-            selection: { anchor: from + selectionAnchorOffset } // Position inside environment or after begin tag
+            changes: { from, to: effectiveTo, insert: content },
+            selection: { anchor: from + selectionAnchorOffset }
           });
         },
         boost: 1
@@ -286,7 +286,7 @@ export const snippets: readonly Completion[] = [
       const content = `\\begin{figure}[htbp]\n${innerIndentation}\\centering\n${innerIndentation}\\includegraphics[width=0.8\\textwidth]{}\n${innerIndentation}\\caption{}\n${innerIndentation}\\label{fig:}\n${currentIndentation}\\end{figure}`;
       view.dispatch({
         changes: { from, to, insert: content },
-        selection: { anchor: from + content.indexOf("{}") }
+        selection: { anchor: from + 1 + content.indexOf("{}") }
       });
     },
   },
@@ -307,7 +307,7 @@ export const snippets: readonly Completion[] = [
       const content = `\\begin{table}[htbp]\n${innerIndentation}\\centering\n${innerIndentation}\\begin{tabular}{ccc}\n${tableIndentation}header1 & header2 & header3 \\\\\n${tableIndentation}\\hline\n${tableIndentation}data1 & data2 & data3 \\\\\n${innerIndentation}\\end{tabular}\n${innerIndentation}\\caption{}\n${innerIndentation}\\label{tab:}\n${currentIndentation}\\end{table}`;
       view.dispatch({
         changes: { from, to, insert: content },
-        selection: { anchor: from + content.indexOf("{}") }
+        selection: { anchor: from + 1 + content.indexOf("{}") }
       });
     },
   }
@@ -315,7 +315,7 @@ export const snippets: readonly Completion[] = [
 
 // Main completion function that provides autocomplete suggestions based on context
 export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
-  return function(context: CompletionContext): CompletionResult | null {
+  return function (context: CompletionContext): CompletionResult | null {
     // Broaden the matching pattern for better detection
     if (!context.explicit) {
       const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);
