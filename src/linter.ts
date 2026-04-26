@@ -2,7 +2,7 @@
 import { Diagnostic } from '@codemirror/lint';
 import { EditorView } from '@codemirror/view';
 import { EditorState, Text } from '@codemirror/state';
-import { syntaxTree } from '@codemirror/language';
+import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { Tree, SyntaxNode } from '@lezer/common';
 
 export interface LatexLinterOptions {
@@ -25,26 +25,29 @@ const DEFAULTS: Required<Omit<LatexLinterOptions, 'fileName'>> & { fileName: str
   fileName: '',
 };
 
+const PARSE_BUDGET_MS = 500;
+
 // Performs basic syntax checking and best practices validation
 export function latexLinter(options: LatexLinterOptions = {}) {
   const opts = { ...DEFAULTS, ...options };
 
   return (view: EditorView): Diagnostic[] => {
     const diagnostics: Diagnostic[] = [];
-    const tree = syntaxTree(view.state);
     const doc = view.state.doc;
+    const tree = ensureSyntaxTree(view.state, doc.length, PARSE_BUDGET_MS) ?? syntaxTree(view.state);
+    const treeComplete = tree.length >= doc.length;
 
-    if (opts.checkMissingDocumentEnv && !isPackageOrClassFile(opts.fileName, doc)) {
+    if (opts.checkMissingDocumentEnv && treeComplete && !isPackageOrClassFile(opts.fileName, doc)) {
       checkDocumentEnv(tree, doc, diagnostics);
     }
-    if (opts.checkUnmatchedEnvironments) {
+    if (opts.checkUnmatchedEnvironments && treeComplete) {
       checkEnvironments(tree, doc, diagnostics);
     }
     if (opts.checkMissingReferences || opts.checkDuplicateLabels || opts.checkCitesWithoutBibliography) {
       checkReferences(tree, doc, diagnostics, {
-        missingRefs: opts.checkMissingReferences,
+        missingRefs: opts.checkMissingReferences && treeComplete,
         duplicateLabels: opts.checkDuplicateLabels,
-        citesWithoutBib: opts.checkCitesWithoutBibliography,
+        citesWithoutBib: opts.checkCitesWithoutBibliography && treeComplete,
       });
     }
     if (opts.checkUnclosedBraces) {
@@ -57,15 +60,24 @@ export function latexLinter(options: LatexLinterOptions = {}) {
 
 // Warns when a non-trivial document is missing \begin{document}
 function checkDocumentEnv(tree: Tree, doc: Text, diagnostics: Diagnostic[]): void {
-  let hasDocumentEnv = false;
+  let hasDocumentBegin = false;
+
   tree.cursor().iterate(node => {
+    if (hasDocumentBegin) return false;
     if (node.name === 'DocumentEnvironment' || node.name === 'DocumentEnvName') {
-      hasDocumentEnv = true;
+      hasDocumentBegin = true;
       return false;
+    }
+    if (node.name === 'BeginEnv') {
+      const text = doc.sliceString(node.from, Math.min(node.to, node.from + 30));
+      if (/^\\begin\s*\{document\}/.test(text)) {
+        hasDocumentBegin = true;
+        return false;
+      }
     }
   });
 
-  if (!hasDocumentEnv && doc.length > 100) {
+  if (!hasDocumentBegin && doc.length > 100) {
     diagnostics.push({
       from: 0,
       to: Math.min(doc.length, 200),
