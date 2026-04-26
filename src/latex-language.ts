@@ -1,8 +1,11 @@
 // src/latex-language.ts
 import { parser } from './latex.mjs';
-import { LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
-  foldInside, foldService, bracketMatching } from '@codemirror/language';
+import {
+  LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
+  foldInside, foldService, bracketMatching, syntaxTree
+} from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
+import { SyntaxNode } from '@lezer/common';
 import { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
@@ -11,7 +14,7 @@ import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
 import { latexCompletionSource } from './completion';
 import { autoCloseTags } from './auto-close-tags';
-import { latexLinter } from './linter';
+import { latexLinter, LatexLinterOptions } from './linter';
 import { latexHoverTooltip } from './tooltips';
 
 // Simple bracket matching for LaTeX
@@ -19,6 +22,36 @@ export const latexBracketMatching = bracketMatching({
   brackets: "()[]{}"
 });
 
+// Fold preamble
+function preambleFoldRanges(state: any, lineStart: number, lineEnd: number) {
+  const tree = syntaxTree(state);
+  const doc = state.doc;
+  const startLine = doc.lineAt(lineStart);
+
+  if (!/^\s*\\documentclass\b/.test(startLine.text)) return null;
+  if (startLine.from !== lineStart) return null;
+
+  let documentBegin = -1;
+  tree.cursor().iterate(node => {
+    if (documentBegin !== -1) return false;
+    if (node.name === 'DocumentEnvironment' || node.name === 'BeginEnv') {
+      const text = doc.sliceString(node.from, Math.min(node.to, node.from + 30));
+      if (/^\\begin\s*\{document\}/.test(text)) {
+        documentBegin = node.from;
+        return false;
+      }
+    }
+  });
+
+  if (documentBegin === -1) return null;
+  const beginLine = doc.lineAt(documentBegin);
+  const endPos = beginLine.from - 1;
+  if (endPos <= startLine.to) return null;
+
+  return { from: startLine.to, to: endPos };
+}
+
+// Fold comments between `% {` and `% }`
 function commentFoldRanges(state: any, lineStart: number, lineEnd: number) {
   const doc = state.doc;
   const startLine = doc.lineAt(lineStart);
@@ -31,13 +64,65 @@ function commentFoldRanges(state: any, lineStart: number, lineEnd: number) {
       if (line.text.trim() === '% }') {
         return {
           from: startLine.to,
-          to: line.to -1
+          to: line.to - 1
         };
       }
     }
   }
 
   return null;
+}
+
+const SECTION_RANK: Record<string, number> = {
+  Book: 0,
+  Part: 1,
+  Chapter: 2,
+  Section: 3,
+  SubSection: 4,
+  SubSubSection: 5,
+  Paragraph: 6,
+  SubParagraph: 7,
+};
+
+// Fold books, parts, chapters, sections, and paragraphs
+function sectionFoldRanges(state: any, lineStart: number, lineEnd: number) {
+  const tree = syntaxTree(state);
+  const doc = state.doc;
+
+  let current: SyntaxNode | null = tree.resolveInner(lineStart, 1);
+  while (current && !(current.name in SECTION_RANK)) {
+    current = current.parent;
+  }
+  if (!current) return null;
+
+  const headingLine = doc.lineAt(current.from);
+  if (headingLine.from !== lineStart) return null;
+
+  const rank = SECTION_RANK[current.name];
+  let endPos = current.to;
+  let boundaryFound = false;
+
+  let walker: SyntaxNode | null = current;
+  while (walker && !boundaryFound) {
+    let sibling: SyntaxNode | null = walker.nextSibling;
+    while (sibling) {
+      const siblingRank = SECTION_RANK[sibling.name];
+      if (siblingRank !== undefined && siblingRank <= rank) {
+        const boundaryLine = doc.lineAt(sibling.from);
+        endPos = boundaryLine.from - 1;
+        boundaryFound = true;
+        break;
+      }
+      endPos = sibling.to;
+      sibling = sibling.nextSibling;
+    }
+    if (!boundaryFound) {
+      walker = walker.parent;
+    }
+  }
+
+  if (endPos <= headingLine.to) return null;
+  return { from: headingLine.to, to: Math.min(endPos, doc.length) };
 }
 
 export const latexLanguage = LRLanguage.define({
@@ -214,7 +299,9 @@ export function latex(config: {
   enableLinting?: boolean,
   enableTooltips?: boolean,
   enableAutocomplete?: boolean,
-  autoCloseBrackets?: boolean
+  autoCloseBrackets?: boolean,
+  fileName?: string,
+  linter?: LatexLinterOptions
 } = {}): LanguageSupport {
   const options = {
     ...config,
@@ -222,7 +309,9 @@ export function latex(config: {
     enableLinting: config.enableLinting ?? true,
     enableTooltips: config.enableTooltips ?? true,
     enableAutocomplete: config.enableAutocomplete ?? true,
-    autoCloseBrackets: config.autoCloseBrackets ?? true
+    autoCloseBrackets: config.autoCloseBrackets ?? true,
+    fileName: config.fileName ?? '',
+    linter: config.linter ?? {}
   };
 
   const extensions = [];
@@ -232,8 +321,10 @@ export function latex(config: {
       autocomplete: latexCompletionSource(options.autoCloseTags)
     })
   );
-  // Add fold service for comments
+  // Add fold service for preamble, comments, and sections
+  extensions.push(foldService.of(preambleFoldRanges));
   extensions.push(foldService.of(commentFoldRanges));
+  extensions.push(foldService.of(sectionFoldRanges));
 
   // Add autocomplete extension
   if (options.enableAutocomplete) {
@@ -257,7 +348,7 @@ export function latex(config: {
   }
 
   if (options.enableLinting) {
-    extensions.push(linter(latexLinter()));
+    extensions.push(linter(latexLinter({ ...options.linter, fileName: options.fileName })));
   }
 
   if (options.enableTooltips) {

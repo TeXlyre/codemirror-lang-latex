@@ -33,6 +33,7 @@ import {
   VerbCtrlSeq,
   LstInlineCtrlSeq,
   IncludeGraphicsCtrlSeq,
+  IncludeSvgCtrlSeq,
   CaptionCtrlSeq,
   DefCtrlSeq,
   LetCtrlSeq,
@@ -65,6 +66,7 @@ import {
   SubParagraphCtrlSeq,
   InputCtrlSeq,
   IncludeCtrlSeq,
+  SubfileCtrlSeq,
   ItemCtrlSeq,
   NewTheoremCtrlSeq,
   TheoremStyleCtrlSeq,
@@ -99,6 +101,8 @@ import {
   EmphasisCtrlSeq,
   UnderlineCtrlSeq,
   SetLengthCtrlSeq,
+  FootnoteCtrlSeq,
+  EndnoteCtrlSeq,
 } from './latex.terms.mjs'
 
 const MAX_ARGUMENT_LOOKAHEAD = 100
@@ -131,7 +135,7 @@ function envNameAfter(input, offset) {
   if (input.peek(offset) !== '{'.charCodeAt(0)) return
   offset++
   let name = ''
-  for (;;) {
+  for (; ;) {
     const next = input.peek(offset)
     if (!nameChar(next)) break
     name += String.fromCharCode(next)
@@ -181,7 +185,7 @@ export const verbTokenizer = new ExternalTokenizer(
     if (delimiter === -1) return // hit end of file
     if (/\s|\*/.test(String.fromCharCode(delimiter))) return // invalid delimiter
     input.advance()
-    for (;;) {
+    for (; ;) {
       const next = input.next
       if (next === -1 || next === CHAR_NEWLINE) return
       input.advance()
@@ -204,7 +208,7 @@ export const lstinlineTokenizer = new ExternalTokenizer(
       delimiter = CHAR_CLOSE_BRACE
     }
     input.advance()
-    for (;;) {
+    for (; ;) {
       const next = input.next
       if (next === -1 || next === CHAR_NEWLINE) return
       input.advance()
@@ -328,7 +332,7 @@ export const csnameTokenizer = new ExternalTokenizer((input, stack) => {
     return
   }
   offset++
-  for (;;) {
+  for (; ;) {
     const next = input.peek(offset)
     // stop when we reach the end of file or a non-csname character
     if (next === -1 || !(alphaChar(next) || next === CHAR_AT_SYMBOL)) {
@@ -556,6 +560,7 @@ const otherKnowncommands = {
   '\\verb': VerbCtrlSeq,
   '\\lstinline': LstInlineCtrlSeq,
   '\\includegraphics': IncludeGraphicsCtrlSeq,
+  '\\includesvg': IncludeSvgCtrlSeq,
   '\\caption': CaptionCtrlSeq,
   '\\def': DefCtrlSeq,
   '\\let': LetCtrlSeq,
@@ -578,6 +583,7 @@ const otherKnowncommands = {
   '\\subparagraph': SubParagraphCtrlSeq,
   '\\input': InputCtrlSeq,
   '\\include': IncludeCtrlSeq,
+  '\\subfile': SubfileCtrlSeq,
   '\\item': ItemCtrlSeq,
   '\\centering': CenteringCtrlSeq,
   '\\newtheorem': NewTheoremCtrlSeq,
@@ -605,6 +611,8 @@ const otherKnowncommands = {
   '\\emph': EmphasisCtrlSeq,
   '\\underline': UnderlineCtrlSeq,
   '\\setlength': SetLengthCtrlSeq,
+  '\\footnote': FootnoteCtrlSeq,
+  '\\endnote': EndnoteCtrlSeq,
 }
 // specializer for control sequences
 // return new tokens for specific control sequences
@@ -692,6 +700,8 @@ const equationArrayEnvNames = new Set([
   'rcases*',
   'IEEEeqnarray',
   'IEEEeqnarray*',
+  'subeqnarray',
+  'subeqnarray*',
 ])
 
 const verbatimEnvNames = new Set([

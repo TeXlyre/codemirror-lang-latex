@@ -78,9 +78,19 @@ Also, we can use display math:
 // Initialize the editor
 let currentOptions = {
   autoCloseTags: true,
+  autoCloseBrackets: true,
   enableLinting: true,
   enableTooltips: true,
-  autoCloseBrackets: false  // Disable auto-closing brackets as it interferes with autoclosetags
+  enableAutocomplete: true,
+  fileName: 'main.tex',
+  linter: {
+    checkMissingDocumentEnv: true,
+    checkUnmatchedEnvironments: true,
+    checkMissingReferences: true,
+    checkUnclosedBraces: true,
+    checkDuplicateLabels: true,
+    checkCitesWithoutBibliography: true,
+  },
 };
 
 function createEditor() {
@@ -96,7 +106,7 @@ function createEditor() {
       ...historyKeymap,
       ...searchKeymap,
       ...completionKeymap,
-        ...foldKeymap
+      ...foldKeymap
     ]),
 
     // Line wrapping is helpful for LaTeX
@@ -123,57 +133,65 @@ function createEditor() {
   });
 }
 
-// Wait for DOM to be ready
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Create the initial editor
   let editorView = createEditor();
 
-  // Handle option changes
-  document.getElementById('autoCloseTags').addEventListener('change', e => {
-    currentOptions.autoCloseTags = e.target.checked;
-    recreateEditor();
-  });
+  bindCheckbox('autoCloseTags', v => { currentOptions.autoCloseTags = v; });
+  bindCheckbox('autoCloseBrackets', v => { currentOptions.autoCloseBrackets = v; });
+  bindCheckbox('enableLinting', v => { currentOptions.enableLinting = v; });
+  bindCheckbox('enableTooltips', v => { currentOptions.enableTooltips = v; });
+  bindCheckbox('enableAutocomplete', v => { currentOptions.enableAutocomplete = v; });
 
-  document.getElementById('enableLinting').addEventListener('change', e => {
-    currentOptions.enableLinting = e.target.checked;
-    recreateEditor();
-  });
+  bindSelect('fileFormat', v => { currentOptions.fileName = `main.${v}`; });
 
-  document.getElementById('enableTooltips').addEventListener('change', e => {
-    currentOptions.enableTooltips = e.target.checked;
-    recreateEditor();
-  });
-
-  document.getElementById('autoCloseBrackets').addEventListener('change', e => {
-    currentOptions.autoCloseBrackets = e.target.checked;
-    recreateEditor();
-  });
+  bindCheckbox('checkMissingDocumentEnv', v => { currentOptions.linter.checkMissingDocumentEnv = v; });
+  bindCheckbox('checkUnmatchedEnvironments', v => { currentOptions.linter.checkUnmatchedEnvironments = v; });
+  bindCheckbox('checkMissingReferences', v => { currentOptions.linter.checkMissingReferences = v; });
+  bindCheckbox('checkUnclosedBraces', v => { currentOptions.linter.checkUnclosedBraces = v; });
+  bindCheckbox('checkDuplicateLabels', v => { currentOptions.linter.checkDuplicateLabels = v; });
+  bindCheckbox('checkCitesWithoutBibliography', v => { currentOptions.linter.checkCitesWithoutBibliography = v; });
 
   function recreateEditor() {
-    // Save current content
     const content = editorView.state.doc.toString();
-
-    // Dispose the old editor
     editorView.destroy();
-
-    // Create a new editor with the updated options
     editorView = createEditor();
-
-    // Set the content back
     editorView.dispatch({
       changes: { from: 0, to: editorView.state.doc.length, insert: content }
     });
   }
 
-  // Toolbar button actions
+
+  function bindCheckbox(id, apply) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target instanceof HTMLInputElement) {
+        apply(target.checked);
+        recreateEditor();
+      }
+    });
+  }
+
+  function bindSelect(id, apply) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target instanceof HTMLSelectElement) {
+        apply(target.value);
+        recreateEditor();
+      }
+    });
+  }
+
   document.getElementById('insertSection').addEventListener('click', () => {
     insertSnippet('\\section{New Section}\n');
   });
-
   document.getElementById('insertEnvironment').addEventListener('click', () => {
     insertSnippet('\\begin{itemize}\n\t\\item New Item\n\\end{itemize}\n');
   });
-
   document.getElementById('insertMath').addEventListener('click', () => {
     insertSnippet('$E = mc^2$');
   });
@@ -186,4 +204,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     editorView.focus();
   }
+
 });

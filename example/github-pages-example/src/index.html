@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="CodeMirror 6 LaTeX language support extension">
   <title>CodeMirror 6 LaTeX Extension</title>
 </head>
+
 <body>
   <header>
     <h1>CodeMirror 6 LaTeX Extension</h1>
@@ -30,18 +32,36 @@
       </div>
 
       <div class="options">
-        <label>
-          <input type="checkbox" id="autoCloseTags" checked> Auto-close tags
-        </label>
-        <label>
-          <input type="checkbox" id="enableLinting" checked> Enable linting
-        </label>
-        <label>
-          <input type="checkbox" id="enableTooltips" checked> Enable tooltips
-        </label>
-        <label>
-          <input type="checkbox" id="autoCloseBrackets"> Auto-close brackets
-        </label>
+        <fieldset>
+          <legend>General</legend>
+          <label><input type="checkbox" id="autoCloseTags" checked> Auto-close tags</label>
+          <label><input type="checkbox" id="autoCloseBrackets" checked> Auto-close brackets</label>
+          <label><input type="checkbox" id="enableLinting" checked> Enable linting</label>
+          <label><input type="checkbox" id="enableTooltips" checked> Enable tooltips</label>
+          <label><input type="checkbox" id="enableAutocomplete" checked> Enable completion suggestions</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>File format</legend>
+          <label>
+            <select id="fileFormat">
+              <option value="tex" selected>.tex (document)</option>
+              <option value="sty">.sty (package)</option>
+              <option value="cls">.cls (class)</option>
+              <option value="dtx">.dtx</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset id="linterOptions">
+          <legend>Linter checks</legend>
+          <label><input type="checkbox" id="checkMissingDocumentEnv" checked> Missing document environment</label>
+          <label><input type="checkbox" id="checkUnmatchedEnvironments" checked> Unmatched \begin/\end</label>
+          <label><input type="checkbox" id="checkMissingReferences" checked> Missing \ref labels</label>
+          <label><input type="checkbox" id="checkUnclosedBraces" checked> Unclosed braces</label>
+          <label><input type="checkbox" id="checkDuplicateLabels" checked> Duplicate labels</label>
+          <label><input type="checkbox" id="checkCitesWithoutBibliography" checked> \cite without bibliography</label>
+        </fieldset>
       </div>
     </section>
 
@@ -83,13 +103,14 @@ let editor = new EditorView({
     </section>
   </main>
 
-<footer>
-  <p>MIT License &copy; <span id="year"></span> <a href="https://abawi.me">Fares Abawi</a></p>
-</footer>
+  <footer>
+    <p>MIT License &copy; <span id="year"></span> <a href="https://abawi.me">Fares Abawi</a></p>
+  </footer>
 
-<script>
-  document.getElementById('year').textContent = new Date().getFullYear();
-</script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 
 </body>
+
 </html>

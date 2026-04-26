@@ -12,7 +12,7 @@ export {
 export { latexCompletionSource } from './completion';
 
 // Export the linter
-export { latexLinter } from './linter';
+export { latexLinter, type LatexLinterOptions } from './linter';
 
 // Export the tooltips
 export { latexHoverTooltip } from './tooltips';

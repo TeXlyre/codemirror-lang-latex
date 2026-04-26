@@ -19,14 +19,75 @@ function isInCommandName(context: CompletionContext): boolean {
   return /\\[a-zA-Z]*$/.test(textBefore);
 }
 
+const MATH_ENVIRONMENTS = [
+  'math', 'displaymath', 'equation', 'align', 'gather', 'multline',
+  'flalign', 'alignat', 'eqnarray', 'array', 'cases', 'split',
+  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix'
+];
+
+const MATH_ONLY_ENVIRONMENTS = [
+  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix',
+  'cases', 'split', 'array'
+];
+
 // Checks if we're in math mode
 function isInMathMode(context: CompletionContext): boolean {
-  // A more sophisticated implementation would use the syntax tree
-  // to determine if we're inside math mode, but this simple version
-  // just checks for dollar signs
   const textBefore = context.state.sliceDoc(0, context.pos);
-  const dollars = textBefore.match(/\$/g);
-  return dollars ? dollars.length % 2 === 1 : false;
+
+  let inDollar = false;
+  let inDoubleDollar = false;
+  let inParen = false;
+  let inBracket = false;
+  const envStack: string[] = [];
+
+  for (let i = 0; i < textBefore.length; i++) {
+    const ch = textBefore[i];
+    const prev = i > 0 ? textBefore[i - 1] : '';
+
+    if (prev === '\\' && (ch === '$' || ch === '(' || ch === ')' || ch === '[' || ch === ']' || ch === '\\')) {
+      if (ch === '\\') {
+        continue;
+      }
+      if (ch === '(') { inParen = true; continue; }
+      if (ch === ')') { inParen = false; continue; }
+      if (ch === '[') { inBracket = true; continue; }
+      if (ch === ']') { inBracket = false; continue; }
+      if (ch === '$') { continue; }
+    }
+
+    if (ch === '$' && prev !== '\\') {
+      if (textBefore[i + 1] === '$') {
+        inDoubleDollar = !inDoubleDollar;
+        i++;
+      } else {
+        inDollar = !inDollar;
+      }
+      continue;
+    }
+
+    if (ch === '\\') {
+      const beginMatch = textBefore.slice(i).match(/^\\begin\{([^}]+)\}/);
+      if (beginMatch) {
+        envStack.push(beginMatch[1].replace(/\*$/, ''));
+        i += beginMatch[0].length - 1;
+        continue;
+      }
+      const endMatch = textBefore.slice(i).match(/^\\end\{([^}]+)\}/);
+      if (endMatch) {
+        const name = endMatch[1].replace(/\*$/, '');
+        const idx = envStack.lastIndexOf(name);
+        if (idx !== -1) {
+          envStack.splice(idx, 1);
+        }
+        i += endMatch[0].length - 1;
+      }
+    }
+  }
+
+  if (inDollar || inDoubleDollar || inParen || inBracket) {
+    return true;
+  }
+  return envStack.some(env => MATH_ENVIRONMENTS.includes(env));
 }
 
 // LaTeX environment names for autocompletion
@@ -53,6 +114,8 @@ export const environments: readonly string[] = [
   'math', 'displaymath', 'equation', 'equation*', 'align', 'align*',
   'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*',
   'alignat', 'alignat*', 'array', 'cases', 'split',
+  'eqnarray', 'eqnarray*',
+  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix',
 
   // Tables
   'tabular', 'tabular*', 'tabularx', 'longtable', 'xltabular',
@@ -324,11 +387,19 @@ export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
       }
     }
 
-    // Check if we're in an environment name
+    // Check if we're in an environment name. Boost math inside math environments
     if (isInEnvironmentName(context)) {
       const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z]*)$/);
       if (envMatch) {
-        const options = environments.map(env => createEnvironmentCompletion(env, autoCloseTagsEnabled));
+        const inMath = isInMathMode(context);
+        const mathOnlySet = new Set(MATH_ONLY_ENVIRONMENTS);
+        const available = environments.filter(env => {
+          if (mathOnlySet.has(env.replace(/\*$/, ''))) {
+            return inMath;
+          }
+          return true;
+        });
+        const options = available.map(env => createEnvironmentCompletion(env, autoCloseTagsEnabled));
 
         return {
           from: envMatch.from + envMatch.text.lastIndexOf('{') + 1,

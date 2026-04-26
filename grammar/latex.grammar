@@ -58,6 +58,7 @@
     VerbCtrlSeq,
     LstInlineCtrlSeq,
     IncludeGraphicsCtrlSeq,
+    IncludeSvgCtrlSeq,
     CaptionCtrlSeq,
     DefCtrlSeq,
     LetCtrlSeq,
@@ -78,6 +79,7 @@
     SubParagraphCtrlSeq,
     InputCtrlSeq,
     IncludeCtrlSeq,
+    SubfileCtrlSeq,
     ItemCtrlSeq,
     NewTheoremCtrlSeq,
     TheoremStyleCtrlSeq,
@@ -108,7 +110,9 @@
     TextStrikeOutCtrlSeq,
     EmphasisCtrlSeq,
     UnderlineCtrlSeq,
-    SetLengthCtrlSeq
+    SetLengthCtrlSeq,
+    FootnoteCtrlSeq,
+    EndnoteCtrlSeq
 }
 
 @external specialize {EnvName} specializeEnvName from "./tokens.mjs" {
@@ -294,6 +298,10 @@ KnownCommand<ArgumentType> {
         IncludeGraphicsCtrlSeq optionalWhitespace? OptionalArgument?
         IncludeGraphicsArgument { FilePathArgument }
     } |
+    IncludeSvg {
+        IncludeSvgCtrlSeq optionalWhitespace? OptionalArgument?
+        IncludeSvgArgument { FilePathArgument }
+    } |
     Caption {
         CaptionCtrlSeq "*"? optionalWhitespace? OptionalArgument? TextArgument
     } |
@@ -347,6 +355,9 @@ KnownCommand<ArgumentType> {
     } |
     Include {
         IncludeCtrlSeq IncludeArgument { FilePathArgument }
+    } |
+    Subfile {
+        SubfileCtrlSeq SubfileArgument { FilePathArgument }
     } |
     Centering {
         CenteringCtrlSeq
@@ -410,6 +421,12 @@ KnownCommand<ArgumentType> {
     } |
     SetLengthCommand {
         SetLengthCtrlSeq optionalWhitespace? ShortTextArgument optionalWhitespace? ShortTextArgument
+    } |
+    FootnoteCommand {
+        FootnoteCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+    } |
+    EndnoteCommand {
+        EndnoteCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
     }
 }
 

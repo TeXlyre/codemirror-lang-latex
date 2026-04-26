@@ -38,24 +38,6 @@ let editor = new EditorView({
 });
 ```
 
-### Configuration Options
-
-You can configure the LaTeX language support by passing options:
-
-```javascript
-import { latex } from 'codemirror-lang-latex';
-
-// With all options explicitly set (these are the defaults)
-const extensions = [
-  // ... other extensions
-  latex({
-    autoCloseTags: true,    // Auto-close environments
-    enableLinting: true,    // Enable linting
-    enableTooltips: true    // Enable hover tooltips
-  })
-];
-```
-
 ## API
 
 ### latex()
@@ -75,9 +57,19 @@ const extensions = [
 const extensions = [
   // ... other extensions
   latex({
-    autoCloseTags: true,    // Enable auto-close environments
-    enableLinting: true,    // Enable linting
-    enableTooltips: true    // Enable tooltips on hover
+    autoCloseTags: true,      // Enable auto-close environments
+    autoCloseBrackets: true,  // Auto-close brackets
+    enableLinting: true,      // Enable linting
+    enableTooltips: true      // Enable tooltips on hover
+    enableAutocomplete?: true // Enable command autocomplete suggestions
+    fileName: 'main.tex',     // Automatically switches off checkUnmatchedEnvironments linter option when file extension != .tex
+    linter:                   // latexLinter options 
+      checkMissingDocumentEnv: true,
+      checkUnmatchedEnvironments: true,
+      checkMissingReferences: true,
+      checkUnclosedBraces: true,
+      checkDuplicateLabels: true,
+      checkCitesWithoutBibliography: true,
   })
 ];
 ```
@@ -100,6 +92,19 @@ import { autoCloseTags } from 'codemirror-lang-latex';
 const extensions = [
   // ... other extensions
   autoCloseTags
+];
+```
+
+### autoCloseBrackets
+
+An extension that provides automatic closing of brackets (uses codemirrors brackets extension).
+
+```javascript
+import { autoCloseBrackets } from 'codemirror-lang-latex';
+
+const extensions = [
+  // ... other extensions
+  autoCloseBrackets
 ];
 ```
 
@@ -127,9 +132,12 @@ import { linter } from '@codemirror/lint';
 const extensions = [
   // ... other extensions
   linter(latexLinter({
-    checkMissingDocumentEnv: true,     // Check for missing document environment
-    checkUnmatchedEnvironments: true,   // Check for unmatched begin/end environments
-    checkMissingReferences: true        // Check for references to undefined labels
+    checkMissingDocumentEnv: true,        // Check for missing document environment
+    checkUnmatchedEnvironments: true,     // Check for unmatched begin/end environments
+    checkMissingReferences: true          // Check for references to undefined labels
+    checkUnclosedBraces: true,            // Check for unclosed brackets and braces 
+    checkDuplicateLabels: true,           // Check for duplicate \label values
+    checkCitesWithoutBibliography: true,  // Check whether \cite commands are used without including a bibliography
   }))
 ];
 ```
