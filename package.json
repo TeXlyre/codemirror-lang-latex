@@ -1,6 +1,6 @@
 {
   "name": "codemirror-lang-latex",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "LaTeX language support for CodeMirror 6",
   "author": "Fares Abawi <fares@abawi.me> (https://abawi.me)",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "build": "npm run generate-parser && tsc && rollup -c",
     "prepare": "npm run build",
     "update-permissions": "node scripts/update-permissions.cjs",
+    "sync-upstream": "node scripts/sync-upstream.cjs",
     "build:example": "cd example/webpack-bundled-example && npm install",
     "build:pages-example": "npm run update-permissions && node scripts/setup-pages-example.cjs",
     "example": "cd example/webpack-bundled-example && npm start",
