@@ -247,3 +247,13 @@ npm run pages-example
 ```
 
 This will also run on `http://localhost:3000` in your browser.
+
+
+# License
+
+`codemirror-lang-latex` is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+See [LICENSE](LICENSE) for the complete license text.
+
+# Acknowledgments
+
+`codemirror-lang-latex` uses the [Overleaf LaTeX grammar](https://github.com/overleaf/overleaf/tree/3b5a148cdc57d8a739d9773518309e54d0ecc3cd/services/web/frontend/js/features/source-editor/lezer-latex).

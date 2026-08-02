@@ -83,5 +83,4 @@ Thank you for your interest in contributing to this project! This document provi
 4. Address any requested changes
 
 ## License
-
-By contributing to this project, you agree that your contributions will be licensed under the project's [MIT License](LICENSE).
+By contributing to this project, you agree that your contributions will be licensed under the project's [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).

@@ -3,7 +3,7 @@
   "version": "0.4.0",
   "description": "GitHub Pages Demo for CodeMirror LaTeX extension",
   "author": "Fares Abawi <fares@abawi.me> (https://abawi.me)",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/texlyre/codemirror-lang-latex.git"
