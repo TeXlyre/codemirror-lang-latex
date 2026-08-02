@@ -3,17 +3,21 @@ import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirro
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import {completionKeymap} from '@codemirror/autocomplete';
-import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap, StreamLanguage } from '@codemirror/language';
+import { lua } from '@codemirror/legacy-modes/mode/lua';
 
 // Import the LaTeX extension - webpack will resolve this from the parent directory
 import { latex } from '../../../dist';
 import './styles.css';
+
+const luaLanguage = StreamLanguage.define(lua);
 
 // Example LaTeX document
 const initialDoc = `% { You can also collapse this block up until '% }'
 \\documentclass{article}
 \\usepackage{amsmath}
 \\usepackage{graphicx}
+\\usepackage{luacode}
 % }
 
 \\title{Example Document}
@@ -34,6 +38,15 @@ Also, we can use display math:
 \\begin{equation}
   f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\,e^{2 \\pi i \\xi x} \\,d\\xi
 \\end{equation}
+
+\\subsection{Embedded Lua}
+\\begin{luacode}
+local sum = 0
+for i = 1, 10 do
+  sum = sum + i  -- running total
+end
+tex.print("The sum is " .. sum)
+\\end{luacode}
 
 \\subsection{Lists}
 \\begin{itemize}
@@ -57,7 +70,8 @@ let currentOptions = {
   autoCloseTags: true,
   enableLinting: true,
   enableTooltips: true,
-  autoCloseBrackets: false  // Disable auto-closing brackets as it interferes with with autoclosetags
+  autoCloseBrackets: false,  // Disable auto-closing brackets as it interferes with with autoclosetags
+  nestedEnvironments: { luacode: luaLanguage, 'luacode*': luaLanguage }
 };
 
 function createEditor() {

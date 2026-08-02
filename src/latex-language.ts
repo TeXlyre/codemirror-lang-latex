@@ -1,11 +1,11 @@
 // src/latex-language.ts
 import { parser } from './latex.mjs';
 import {
-  LRLanguage, LanguageSupport, indentNodeProp, foldNodeProp,
+  LRLanguage, Language, LanguageSupport, indentNodeProp, foldNodeProp,
   foldInside, foldService, bracketMatching, syntaxTree
 } from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
-import { SyntaxNode } from '@lezer/common';
+import { Parser, SyntaxNode, parseMixed } from '@lezer/common';
 import { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
@@ -293,6 +293,30 @@ export const latexCompletions = {
 export { autoCloseTags } from './auto-close-tags';
 export { snippets } from './completion';
 
+export type NestedEnvironments = Record<string, Parser | Language | LanguageSupport>;
+
+// Resolves a language, language support or bare parser to a parser
+function toParser(value: Parser | Language | LanguageSupport): Parser {
+  if (value instanceof LanguageSupport) return value.language.parser;
+  if (value instanceof Language) return value.parser;
+  return value;
+}
+
+// Parses the body of the given verbatim environments with another language
+export function nestedEnvironmentParsers(languages: NestedEnvironments) {
+  const parsers = new Map<string, Parser>(
+    Object.entries(languages).map(([name, value]) => [name, toParser(value)])
+  );
+
+  return parseMixed((node, input) => {
+    if (node.name !== 'VerbatimContent') return null;
+    const before = input.read(Math.max(0, node.from - 64), node.from);
+    const name = /\\begin\s*\{([^}]*)\}\s*$/.exec(before)?.[1];
+    const nested = name ? parsers.get(name.trim()) : undefined;
+    return nested ? { parser: nested } : null;
+  });
+}
+
 // Provides LaTeX language support with configurable features
 export function latex(config: {
   autoCloseTags?: boolean,
@@ -301,7 +325,8 @@ export function latex(config: {
   enableAutocomplete?: boolean,
   autoCloseBrackets?: boolean,
   fileName?: string,
-  linter?: LatexLinterOptions
+  linter?: LatexLinterOptions,
+  nestedEnvironments?: NestedEnvironments
 } = {}): LanguageSupport {
   const options = {
     ...config,
@@ -314,10 +339,14 @@ export function latex(config: {
     linter: config.linter ?? {}
   };
 
+  const language = options.nestedEnvironments
+    ? latexLanguage.configure({ wrap: nestedEnvironmentParsers(options.nestedEnvironments) })
+    : latexLanguage;
+
   const extensions = [];
 
   extensions.push(
-    latexLanguage.data.of({
+    language.data.of({
       autocomplete: latexCompletionSource(options.autoCloseTags)
     })
   );
@@ -355,5 +384,5 @@ export function latex(config: {
     extensions.push(latexHoverTooltip);
   }
 
-  return new LanguageSupport(latexLanguage, extensions);
+  return new LanguageSupport(language, extensions);
 }

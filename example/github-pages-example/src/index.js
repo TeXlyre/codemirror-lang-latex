@@ -3,17 +3,21 @@ import { EditorView, lineNumbers, highlightActiveLine, keymap } from '@codemirro
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { completionKeymap } from '@codemirror/autocomplete';
-import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, foldGutter, foldKeymap, StreamLanguage } from '@codemirror/language';
+import { lua } from '@codemirror/legacy-modes/mode/lua';
 
 // Import the LaTeX extension from a relative path to access the built package
 import { latex } from '../../..';
 import './styles.css';
+
+const luaLanguage = StreamLanguage.define(lua);
 
 // Example LaTeX document
 const initialDoc = `% { You can also collapse this block up until '% }'
 \\documentclass{article}
 \\usepackage{amsmath}
 \\usepackage{graphicx}
+\\usepackage{luacode}
 % }
 
 \\title{CodeMirror LaTeX Extension Demo}
@@ -37,6 +41,15 @@ Also, we can use display math:
 \\begin{equation}
   f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\,e^{2 \\pi i \\xi x} \\,d\\xi
 \\end{equation}
+
+\\subsection{Embedded Lua}
+\\begin{luacode}
+local sum = 0
+for i = 1, 10 do
+  sum = sum + i  -- running total
+end
+tex.print("The sum is " .. sum)
+\\end{luacode}
 
 \\subsection{Lists}
 \\begin{itemize}
@@ -83,6 +96,7 @@ let currentOptions = {
   enableTooltips: true,
   enableAutocomplete: true,
   fileName: 'main.tex',
+  nestedEnvironments: { luacode: luaLanguage, 'luacode*': luaLanguage },
   linter: {
     checkMissingDocumentEnv: true,
     checkUnmatchedEnvironments: true,
@@ -90,6 +104,9 @@ let currentOptions = {
     checkUnclosedBraces: true,
     checkDuplicateLabels: true,
     checkCitesWithoutBibliography: true,
+    checkMathModeCommands: true,
+    checkDeprecatedCommands: true,
+    checkMissingPackages: true,
   },
 };
 
@@ -151,6 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCheckbox('checkUnclosedBraces', v => { currentOptions.linter.checkUnclosedBraces = v; });
   bindCheckbox('checkDuplicateLabels', v => { currentOptions.linter.checkDuplicateLabels = v; });
   bindCheckbox('checkCitesWithoutBibliography', v => { currentOptions.linter.checkCitesWithoutBibliography = v; });
+  bindCheckbox('checkMathModeCommands', v => { currentOptions.linter.checkMathModeCommands = v; });
+  bindCheckbox('checkDeprecatedCommands', v => { currentOptions.linter.checkDeprecatedCommands = v; });
+  bindCheckbox('checkMissingPackages', v => { currentOptions.linter.checkMissingPackages = v; });
 
   function recreateEditor() {
     const content = editorView.state.doc.toString();

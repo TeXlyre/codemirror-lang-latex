@@ -193,6 +193,7 @@ export const latexEnvironments: readonly LatexEnvironmentInfo[] = [
   { name: 'verbatim' }, { name: 'verbatim*' }, { name: 'comment', package: 'verbatim' },
   { name: 'Verbatim', package: 'fancyvrb' }, { name: 'alltt', package: 'alltt' },
   { name: 'lstlisting', package: 'listings' }, { name: 'minted', package: 'minted' },
+  { name: 'luacode', package: 'luacode' }, { name: 'luacode*', package: 'luacode' },
 
   { name: 'math', math: true }, { name: 'displaymath', math: true },
   { name: 'equation', math: true }, { name: 'equation*', math: true },
@@ -255,7 +256,7 @@ export const latexPackages: readonly string[] = [
   'enumitem', 'cleveref', 'siunitx', 'mhchem', 'chemfig', 'todonotes', 'lipsum',
   'etoolbox', 'xparse', 'ifthen', 'calc', 'adjustbox', 'rotating', 'pdfpages',
   'tcolorbox', 'mdframed', 'framed', 'ulem', 'soul', 'verbatim', 'fancyvrb',
-  'placeins', 'subfiles', 'import', 'xspace', 'mathrsfs', 'stmaryrd'
+  'placeins', 'subfiles', 'import', 'xspace', 'mathrsfs', 'stmaryrd', 'luacode'
 ];
 
 export const documentClasses: readonly string[] = [
@@ -398,7 +399,8 @@ export const mathEnvironments: ReadonlySet<string> = new Set(
 );
 
 export const verbatimEnvironments: ReadonlySet<string> = new Set([
-  'verbatim', 'Verbatim', 'lstlisting', 'minted', 'comment', 'alltt', 'filecontents'
+  'verbatim', 'Verbatim', 'boxedverbatim', 'lstlisting', 'minted', 'tcblisting',
+  'codeexample', 'comment', 'alltt', 'filecontents', 'luacode'
 ]);
 
 const TEXT_SAFE_COMMANDS = new Set(['\\ldots', '\\dots', '\\dotsc']);
