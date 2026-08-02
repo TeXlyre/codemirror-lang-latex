@@ -70,6 +70,9 @@ const extensions = [
       checkUnclosedBraces: true,
       checkDuplicateLabels: true,
       checkCitesWithoutBibliography: true,
+      checkMathModeCommands: true,
+      checkDeprecatedCommands: true,
+      checkMissingPackages: true,
   })
 ];
 ```
@@ -138,6 +141,9 @@ const extensions = [
     checkUnclosedBraces: true,            // Check for unclosed brackets and braces 
     checkDuplicateLabels: true,           // Check for duplicate \label values
     checkCitesWithoutBibliography: true,  // Check whether \cite commands are used without including a bibliography
+    checkMathModeCommands: true,          // Check for math-only commands used outside math mode
+    checkDeprecatedCommands: true,        // Check for obsolete commands and environments
+    checkMissingPackages: true,           // Check for commands whose package is not loaded
   }))
 ];
 ```

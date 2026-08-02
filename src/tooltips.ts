@@ -2,6 +2,7 @@
 import { hoverTooltip, Tooltip } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
 import { SyntaxNode } from '@lezer/common';
+import { commandIndex, environmentIndex } from './latex-data';
 
 interface CommandInfo {
   description: string;
@@ -203,6 +204,40 @@ const environmentInfoMap: Record<string, CommandInfo> = {
   }
 };
 
+// Falls back to the shared command table for entries without a curated description
+function lookupCommand(name: string): CommandInfo | null {
+  const curated = commandInfoMap[name];
+  if (curated) return curated;
+
+  const info = commandIndex.get(name);
+  if (!info) return null;
+
+  return {
+    description: info.detail
+      ? `Math symbol ${info.detail}`
+      : info.math
+        ? 'Math-mode command.'
+        : 'LaTeX command.',
+    syntax: info.template ?? info.name,
+    package: info.package
+  };
+}
+
+// Falls back to the shared environment table for entries without a curated description
+function lookupEnvironment(name: string): CommandInfo | null {
+  const curated = environmentInfoMap[name];
+  if (curated) return curated;
+
+  const info = environmentIndex.get(name);
+  if (!info) return null;
+
+  return {
+    description: info.math ? 'Math environment.' : 'LaTeX environment.',
+    syntax: `\\begin{${info.name}}...\\end{${info.name}}`,
+    package: info.package
+  };
+}
+
 /**
  * Provides hover tooltips for LaTeX commands and environments
  */
@@ -218,7 +253,7 @@ export const latexHoverTooltip = hoverTooltip((view, pos, side) => {
     node.name === 'End'
   ) {
     const cmdText = view.state.sliceDoc(node.from, node.to);
-    const info = commandInfoMap[cmdText];
+    const info = lookupCommand(cmdText);
 
     if (info) {
       return makeTooltip(info, node.from, node.to);
@@ -228,7 +263,7 @@ export const latexHoverTooltip = hoverTooltip((view, pos, side) => {
   // Check for environments
   if (node.name === 'EnvName' || node.name.endsWith('EnvName')) {
     const envName = view.state.sliceDoc(node.from, node.to);
-    const info = environmentInfoMap[envName];
+    const info = lookupEnvironment(envName);
 
     if (info) {
       return makeTooltip(info, node.from, node.to);
@@ -241,7 +276,7 @@ export const latexHoverTooltip = hoverTooltip((view, pos, side) => {
     const envNameNode = findEnvNameNode(parent);
     if (envNameNode) {
       const envName = view.state.sliceDoc(envNameNode.from, envNameNode.to);
-      const info = environmentInfoMap[envName];
+      const info = lookupEnvironment(envName);
 
       if (info) {
         return makeTooltip(info, envNameNode.from, envNameNode.to);

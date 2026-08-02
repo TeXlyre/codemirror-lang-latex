@@ -28,6 +28,25 @@ export {
 // Export snippets
 export { snippets } from './completion';
 
+// Export the shared command, environment and symbol tables
+export {
+  latexCommands,
+  latexEnvironments,
+  latexPackages,
+  documentClasses,
+  commandIndex,
+  environmentIndex,
+  mathOnlyCommands,
+  requiredPackages,
+  LatexCommandInfo,
+  LatexEnvironmentInfo
+} from './latex-data';
+
+export { mathSymbols, symbolIndex, LatexSymbol } from './latex-symbols';
+
+// Export the math-mode scanner used by completion and linting
+export { scanLatexModes, isInMathRange, LatexModeScan } from './parser-utils';
+
 // Export the parser directly - using type assertion to bypass declaration file issue
 export { parser } from './parser-integration';
 

@@ -4,6 +4,14 @@ import { EditorView } from '@codemirror/view';
 import { EditorState, Text } from '@codemirror/state';
 import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { Tree, SyntaxNode } from '@lezer/common';
+import { isInMathRange, scanLatexModes } from './parser-utils';
+import {
+  deprecatedCommands,
+  deprecatedEnvironments,
+  expandProvidedPackages,
+  mathOnlyCommands,
+  requiredPackages,
+} from './latex-data';
 
 export interface LatexLinterOptions {
   checkMissingDocumentEnv?: boolean;
@@ -12,6 +20,9 @@ export interface LatexLinterOptions {
   checkUnclosedBraces?: boolean;
   checkDuplicateLabels?: boolean;
   checkCitesWithoutBibliography?: boolean;
+  checkMathModeCommands?: boolean;
+  checkDeprecatedCommands?: boolean;
+  checkMissingPackages?: boolean;
   fileName?: string;
 }
 
@@ -22,6 +33,9 @@ const DEFAULTS: Required<Omit<LatexLinterOptions, 'fileName'>> & { fileName: str
   checkUnclosedBraces: true,
   checkDuplicateLabels: true,
   checkCitesWithoutBibliography: true,
+  checkMathModeCommands: true,
+  checkDeprecatedCommands: true,
+  checkMissingPackages: true,
   fileName: '',
 };
 
@@ -52,6 +66,13 @@ export function latexLinter(options: LatexLinterOptions = {}) {
     }
     if (opts.checkUnclosedBraces) {
       checkBraces(view.state, diagnostics);
+    }
+    if (opts.checkMathModeCommands || opts.checkDeprecatedCommands || opts.checkMissingPackages) {
+      checkUsage(tree, doc, diagnostics, {
+        mathMode: opts.checkMathModeCommands,
+        deprecated: opts.checkDeprecatedCommands,
+        missingPackages: opts.checkMissingPackages && treeComplete,
+      });
     }
 
     return diagnostics;
@@ -209,6 +230,16 @@ function maskCommentsAndRanges(text: string, ranges: Array<[number, number]>): s
   while (i < text.length) {
     const ch = text.charCodeAt(i);
     if (ch === 92 && i + 1 < text.length) {
+      const verb = /^\\verb\*?([^a-zA-Z0-9\s])/.exec(text.slice(i, i + 16));
+      if (verb) {
+        const closeIndex = text.indexOf(verb[1], i + verb[0].length);
+        const stop = closeIndex === -1 ? text.length : closeIndex + 1;
+        result += text.slice(cursor, i);
+        result += text.slice(i, stop).replace(/[^\n]/g, ' ');
+        cursor = stop;
+        i = stop;
+        continue;
+      }
       i += 2;
       continue;
     }
@@ -276,6 +307,10 @@ function checkReferences(
       }
     }
   });
+
+  if (!hasBibliography && opts.citesWithoutBib && cites.length > 0) {
+    hasBibliography = hasBibliographySource(doc);
+  }
 
   if (opts.missingRefs) {
     for (const ref of refs) {
@@ -453,4 +488,190 @@ function readBracedArgument(node: SyntaxNode, doc: Text): string | null {
     break;
   }
   return null;
+}
+// Validates math-mode usage, deprecated constructs and package requirements
+function checkUsage(
+  tree: Tree,
+  doc: Text,
+  diagnostics: Diagnostic[],
+  opts: { mathMode: boolean; deprecated: boolean; missingPackages: boolean },
+): void {
+  const text = doc.toString();
+  const verbatimRanges: Array<[number, number]> = [];
+  tree.cursor().iterate(node => {
+    if (node.name === 'VerbatimEnvironment' || node.name === 'VerbCtrlSeq') {
+      verbatimRanges.push([node.from, node.to]);
+    }
+  });
+
+  const masked = maskDefinitionBodies(maskCommentsAndRanges(text, verbatimRanges));
+  const { mathRanges } = scanLatexModes(text);
+  const reportedPackages = new Set<string>();
+
+  const documentClass = /\\documentclass\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/.exec(masked)?.[1].trim();
+  const loadedPackages = new Set<string>();
+  const packageRe = /\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g;
+  let packageMatch: RegExpExecArray | null;
+  while ((packageMatch = packageRe.exec(masked))) {
+    for (const name of packageMatch[1].split(',')) {
+      const trimmed = name.trim();
+      if (trimmed) loadedPackages.add(trimmed);
+    }
+  }
+
+  const hasIncludes = /\\(?:input|include|subfile|import)\b/.test(masked);
+  const checkPackages = opts.missingPackages && !!documentClass && !hasIncludes;
+  const provided = checkPackages ? expandProvidedPackages(loadedPackages, documentClass) : new Set<string>();
+
+  const reportMissingPackage = (key: string, label: string, from: number, to: number) => {
+    if (!checkPackages) return;
+    const required = requiredPackages.get(key);
+    if (!required || provided.has(required) || reportedPackages.has(required)) return;
+    reportedPackages.add(required);
+    diagnostics.push({
+      from,
+      to,
+      severity: 'warning',
+      message: `${label} requires \\usepackage{${required}}`,
+      source: 'LaTeX',
+    });
+  };
+
+  const commandRe = /\\[a-zA-Z]+/g;
+  let match: RegExpExecArray | null;
+  while ((match = commandRe.exec(masked))) {
+    const name = match[0];
+    const from = match.index;
+    const to = from + name.length;
+
+    if (opts.mathMode && mathOnlyCommands.has(name) && !isInMathRange(mathRanges, from)) {
+      diagnostics.push({
+        from,
+        to,
+        severity: 'error',
+        message: `${name} can only be used in math mode`,
+        source: 'LaTeX',
+      });
+    }
+
+    if (opts.deprecated && deprecatedCommands[name]) {
+      diagnostics.push({
+        from,
+        to,
+        severity: 'warning',
+        message: `${name} is obsolete; use ${deprecatedCommands[name]}`,
+        source: 'LaTeX',
+      });
+    }
+
+    reportMissingPackage(name, name, from, to);
+  }
+
+  const environmentRe = /\\begin\s*\{([^}]*)\}/g;
+  while ((match = environmentRe.exec(masked))) {
+    const name = match[1].trim();
+    const from = match.index;
+    const to = from + match[0].length;
+
+    if (opts.deprecated && deprecatedEnvironments[name]) {
+      diagnostics.push({
+        from,
+        to,
+        severity: 'warning',
+        message: `The ${name} environment is obsolete; use ${deprecatedEnvironments[name]}`,
+        source: 'LaTeX',
+      });
+    }
+
+    reportMissingPackage(`env:${name}`, `The ${name} environment`, from, to);
+  }
+
+  if (opts.deprecated) {
+    let opening = true;
+    for (let i = 0; i < masked.length - 1; i++) {
+      if (masked[i] !== '$' || masked[i + 1] !== '$') continue;
+      if (opening) {
+        diagnostics.push({
+          from: i,
+          to: i + 2,
+          severity: 'warning',
+          message: '$$...$$ is obsolete in LaTeX; use \\[...\\] or the equation* environment',
+          source: 'LaTeX',
+        });
+      }
+      opening = !opening;
+      i++;
+    }
+  }
+}
+
+// Blanks out macro definition bodies and \ensuremath arguments, preserving offsets
+function maskDefinitionBodies(text: string): string {
+  const chars = text.split('');
+  const definitionRe = /\\(?:re)?new(?:command|environment)\*?|\\providecommand\*?|\\DeclareRobustCommand\*?|\\DeclareMathOperator\*?|\\ensuremath|\\def/g;
+
+  const blank = (from: number, to: number) => {
+    for (let i = from; i < to; i++) {
+      if (chars[i] !== '\n') chars[i] = ' ';
+    }
+  };
+
+  let match: RegExpExecArray | null;
+  while ((match = definitionRe.exec(text))) {
+    let i = match.index + match[0].length;
+    while (i < text.length) {
+      while (i < text.length && /[ \t]/.test(text[i])) i++;
+      const ch = text[i];
+      if (ch === '[') {
+        const end = text.indexOf(']', i);
+        if (end === -1) break;
+        blank(i, end + 1);
+        i = end + 1;
+        continue;
+      }
+      if (ch === '\\' && /[a-zA-Z]/.test(text[i + 1] ?? '')) {
+        let j = i + 1;
+        while (j < text.length && /[a-zA-Z]/.test(text[j])) j++;
+        blank(i, j);
+        i = j;
+        continue;
+      }
+      if (ch === '{') {
+        const end = matchingBrace(text, i);
+        if (end === -1) break;
+        blank(i, end + 1);
+        i = end + 1;
+        continue;
+      }
+      break;
+    }
+    definitionRe.lastIndex = Math.max(i, definitionRe.lastIndex);
+  }
+
+  return chars.join('');
+}
+
+// Index of the brace closing the group that starts at `start`
+function matchingBrace(text: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '\\') {
+      i++;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+const BIBLIOGRAPHY_SOURCE_RE = /\\(?:addbibresource|addglobalbib|addsectionbib|printbibliography|printbibheading|printbiblist|bibbysection|bibbysegment|bibbycategory|nobibliography|putbib|bibliographyunit|bibliography|begin\s*\{(?:thebibliography|refsection|refsegment|btSect|btUnit)\})/;
+
+// Detects bibliographies declared through BibTeX, biblatex/biber or bibunits
+function hasBibliographySource(doc: Text): boolean {
+  return BIBLIOGRAPHY_SOURCE_RE.test(maskCommentsAndRanges(doc.toString(), []));
 }

@@ -1,224 +1,89 @@
 // src/completion.ts
 import { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import {
+  commandIndex,
+  documentClassOptions,
+  documentClasses,
+  includegraphicsKeys,
+  latexCommands,
+  latexEnvironments,
+  environmentIndex,
+  latexPackages,
+  packageOptions,
+  tabularColumnSpecs
+} from './latex-data';
+import { greekSymbols, mathSymbols } from './latex-symbols';
+import { scanLatexModes } from './parser-utils';
+
+const TABULAR_ENVIRONMENTS = 'tabular\\*?|tabularx|xltabular|longtable|array|NiceTabular|tabu';
+
+function unique(names: string[]): string[] {
+  return [...new Set(names)];
+}
 
 // Checks if we're at the beginning of an environment name within a \begin{} or \end{}
 function isInEnvironmentName(context: CompletionContext): boolean {
-  const textBefore = context.state.sliceDoc(
-    Math.max(0, context.pos - 20),
-    context.pos
-  );
+  const textBefore = context.state.sliceDoc(Math.max(0, context.pos - 20), context.pos);
   return /\\(begin|end)\{[^}]*$/.test(textBefore);
 }
 
 // Checks if we're inside a command name (after a backslash)
 function isInCommandName(context: CompletionContext): boolean {
-  const textBefore = context.state.sliceDoc(
-    Math.max(0, context.pos - 30),
-    context.pos
-  );
+  const textBefore = context.state.sliceDoc(Math.max(0, context.pos - 30), context.pos);
   return /\\[a-zA-Z]*$/.test(textBefore);
 }
 
-const MATH_ENVIRONMENTS = [
-  'math', 'displaymath', 'equation', 'align', 'gather', 'multline',
-  'flalign', 'alignat', 'eqnarray', 'array', 'cases', 'split',
-  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix'
-];
-
-const MATH_ONLY_ENVIRONMENTS = [
-  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix',
-  'cases', 'split', 'array'
-];
-
 // Checks if we're in math mode
 function isInMathMode(context: CompletionContext): boolean {
-  const textBefore = context.state.sliceDoc(0, context.pos);
+  return scanLatexModes(context.state.sliceDoc(0, context.pos)).openMath;
+}
 
-  let inDollar = false;
-  let inDoubleDollar = false;
-  let inParen = false;
-  let inBracket = false;
-  const envStack: string[] = [];
-
-  for (let i = 0; i < textBefore.length; i++) {
-    const ch = textBefore[i];
-    const prev = i > 0 ? textBefore[i - 1] : '';
-
-    if (prev === '\\' && (ch === '$' || ch === '(' || ch === ')' || ch === '[' || ch === ']' || ch === '\\')) {
-      if (ch === '\\') {
-        continue;
-      }
-      if (ch === '(') { inParen = true; continue; }
-      if (ch === ')') { inParen = false; continue; }
-      if (ch === '[') { inBracket = true; continue; }
-      if (ch === ']') { inBracket = false; continue; }
-      if (ch === '$') { continue; }
-    }
-
-    if (ch === '$' && prev !== '\\') {
-      if (textBefore[i + 1] === '$') {
-        inDoubleDollar = !inDoubleDollar;
-        i++;
-      } else {
-        inDollar = !inDollar;
-      }
-      continue;
-    }
-
-    if (ch === '\\') {
-      const beginMatch = textBefore.slice(i).match(/^\\begin\{([^}]+)\}/);
-      if (beginMatch) {
-        envStack.push(beginMatch[1].replace(/\*$/, ''));
-        i += beginMatch[0].length - 1;
-        continue;
-      }
-      const endMatch = textBefore.slice(i).match(/^\\end\{([^}]+)\}/);
-      if (endMatch) {
-        const name = endMatch[1].replace(/\*$/, '');
-        const idx = envStack.lastIndexOf(name);
-        if (idx !== -1) {
-          envStack.splice(idx, 1);
-        }
-        i += endMatch[0].length - 1;
-      }
-    }
-  }
-
-  if (inDollar || inDoubleDollar || inParen || inBracket) {
-    return true;
-  }
-  return envStack.some(env => MATH_ENVIRONMENTS.includes(env));
+// Innermost environment that has not been closed before the cursor
+function innermostOpenEnvironment(context: CompletionContext): string | null {
+  const { envStack } = scanLatexModes(context.state.sliceDoc(0, context.pos));
+  return envStack.length > 0 ? envStack[envStack.length - 1] : null;
 }
 
 // LaTeX environment names for autocompletion
-export const environments: readonly string[] = [
-  // Document structure
-  'document', 'abstract',
-
-  // Sectioning alternatives
-  'appendix', 'frontmatter', 'mainmatter', 'backmatter',
-
-  // Floats
-  'figure', 'figure*', 'table', 'table*', 'wrapfigure', 'subfigure',
-
-  // Text alignment
-  'center', 'flushleft', 'flushright', 'quote', 'quotation', 'verse',
-
-  // Lists
-  'itemize', 'enumerate', 'description', 'list',
-
-  // Verbatim
-  'verbatim', 'verbatim*', 'lstlisting', 'minted', 'Verbatim', 'comment',
-
-  // Math
-  'math', 'displaymath', 'equation', 'equation*', 'align', 'align*',
-  'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*',
-  'alignat', 'alignat*', 'array', 'cases', 'split',
-  'eqnarray', 'eqnarray*',
-  'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix',
-
-  // Tables
-  'tabular', 'tabular*', 'tabularx', 'longtable', 'xltabular',
-
-  // Theorems
-  'theorem', 'lemma', 'corollary', 'proposition', 'definition', 'example', 'proof',
-
-  // TikZ
-  'tikzpicture', 'scope',
-
-  // Boxes
-  'minipage'
-];
+export const environments: readonly string[] = latexEnvironments.map(environment => environment.name);
 
 // LaTeX commands for autocompletion
-export const commands: readonly string[] = [
-  // Document structure
-  '\\documentclass', '\\usepackage', '\\title', '\\author', '\\date', '\\maketitle',
-  '\\tableofcontents', '\\appendix', '\\bibliography', '\\bibliographystyle',
-
-  // Sectioning commands
-  '\\part', '\\chapter', '\\section', '\\subsection', '\\subsubsection', '\\paragraph', '\\subparagraph',
-
-  // Environments
-  '\\begin', '\\end',
-
-  // References
-  '\\label', '\\ref', '\\pageref', '\\cite', '\\nocite', '\\bibitem',
-
-  // Text formatting
-  '\\textbf', '\\textit', '\\texttt', '\\textsf', '\\textrm', '\\textsc', '\\emph', '\\underline',
-  '\\textcolor', '\\colorbox',
-
-  // Lists
-  '\\item', '\\itemize', '\\enumerate',
-
-  // Graphics
-  '\\includegraphics', '\\caption', '\\figure',
-
-  // Math commands
-  '\\frac', '\\sqrt', '\\sum', '\\int', '\\prod', '\\lim', '\\infty', '\\partial',
-  '\\alpha', '\\beta', '\\gamma', '\\delta', '\\epsilon', '\\varepsilon', '\\zeta', '\\eta', '\\theta',
-  '\\iota', '\\kappa', '\\lambda', '\\mu', '\\nu', '\\xi', '\\pi', '\\rho', '\\sigma', '\\tau',
-  '\\upsilon', '\\phi', '\\varphi', '\\chi', '\\psi', '\\omega',
-  '\\Gamma', '\\Delta', '\\Theta', '\\Lambda', '\\Xi', '\\Pi', '\\Sigma', '\\Upsilon', '\\Phi', '\\Psi', '\\Omega',
-
-  // Special characters and spacing
-  '\\&', '\\%', '\\$', '\\#', '\\_', '\\{', '\\}', '\\\\', '\\quad', '\\qquad', '\\hspace', '\\vspace',
-
-  // Tables
-  '\\hline', '\\cline', '\\multicolumn', '\\multirow', '\\toprule', '\\midrule', '\\bottomrule',
-
-  // Definitions
-  '\\newcommand', '\\renewcommand', '\\newenvironment', '\\renewenvironment', '\\def', '\\let',
-
-  // Input/Include
-  '\\input', '\\include', '\\includeonly'
-];
+export const commands: readonly string[] = unique([
+  ...latexCommands.map(command => command.name),
+  ...greekSymbols.map(symbol => symbol.name),
+  '\\sum', '\\int', '\\prod', '\\lim', '\\infty', '\\partial'
+]);
 
 // Additional math commands for completion in math mode
-export const mathCommands: readonly string[] = [
-  // Greek letters already included in main commands
-
-  // Math operators
-  '\\sin', '\\cos', '\\tan', '\\arcsin', '\\arccos', '\\arctan',
-  '\\sinh', '\\cosh', '\\tanh', '\\log', '\\ln', '\\exp',
-  '\\min', '\\max', '\\sup', '\\inf', '\\lim', '\\limsup', '\\liminf',
-  '\\det', '\\dim', '\\mod', '\\gcd', '\\lcm', '\\mathop',
-
-  // Math symbols
-  '\\rightarrow', '\\leftarrow', '\\Rightarrow', '\\Leftarrow', '\\mapsto',
-  '\\approx', '\\sim', '\\simeq', '\\cong', '\\equiv', '\\prec', '\\succ',
-  '\\neq', '\\geq', '\\leq', '\\ll', '\\gg', '\\subset', '\\subseteq', '\\in', '\\notin',
-  '\\cap', '\\cup', '\\setminus', '\\emptyset', '\\varnothing',
-  '\\forall', '\\exists', '\\nexists',
-  '\\mathbb{R}', '\\mathbb{Z}', '\\mathbb{N}', '\\mathbb{Q}', '\\mathbb{C}',
-
-  // Math decorations
-  '\\hat', '\\tilde', '\\bar', '\\vec', '\\dot', '\\ddot', '\\underline', '\\overline',
-
-  // Math environments
-  '\\begin{equation}', '\\begin{align}', '\\begin{align*}', '\\begin{gather}', '\\begin{array}',
-  '\\begin{cases}', '\\begin{matrix}', '\\begin{pmatrix}', '\\begin{bmatrix}', '\\begin{vmatrix}'
-];
+export const mathCommands: readonly string[] = unique([
+  ...mathSymbols.map(symbol => symbol.name),
+  ...latexCommands.filter(command => command.math).map(command => command.name)
+]);
 
 // Completions for package names after \usepackage
-export const packages: readonly string[] = [
-  'amsmath', 'amssymb', 'amsfonts', 'amsthm', 'mathtools',
-  'graphicx', 'xcolor', 'hyperref', 'url',
-  'geometry', 'fancyhdr', 'lastpage',
-  'booktabs', 'tabularx', 'longtable', 'multirow',
-  'tikz', 'pgfplots', 'pgf',
-  'babel', 'inputenc', 'fontenc',
-  'natbib', 'biblatex', 'cite',
-  'algorithm', 'algorithmic', 'listings', 'minted',
-  'enumitem', 'cleveref', 'microtype'
-];
+export const packages: readonly string[] = latexPackages;
+
+const commandSet = new Set(commands);
+
+// Places the cursor inside the first empty group of a template
+function applyTemplate(template: string): Completion['apply'] {
+  const groupStart = template.indexOf('{}');
+  const anchorOffset = groupStart === -1 ? template.length : groupStart + 1;
+  return (view, completion, from, to) => {
+    view.dispatch({
+      changes: { from, to, insert: template },
+      selection: { anchor: from + anchorOffset }
+    });
+  };
+}
 
 // Create environment completion with auto-closing and proper indentation
-function createEnvironmentCompletion(envName: string, autoCloseEnabled: boolean): Completion {
+function createEnvironmentCompletion(envName: string, autoCloseEnabled: boolean, boost = 1): Completion {
+  const info = environmentIndex.get(envName);
   return {
     label: envName,
     type: "class",
+    detail: info?.package,
     apply: (view, completion, from, to) => {
       const line = view.state.doc.lineAt(from);
       const beforeCursor = view.state.sliceDoc(line.from, from);
@@ -257,11 +122,11 @@ function createEnvironmentCompletion(envName: string, autoCloseEnabled: boolean)
         });
       }
     },
-    boost: 1
+    boost
   };
 }
 
-// Create command completion with environment auto-closing
+// Create command completion with environment auto-closing and argument templates
 function createCommandCompletion(cmd: string, autoCloseEnabled: boolean): Completion {
   if (cmd.startsWith('\\begin{')) {
     const envMatch = cmd.match(/\\begin\{([^}]+)\}/);
@@ -297,10 +162,12 @@ function createCommandCompletion(cmd: string, autoCloseEnabled: boolean): Comple
     }
   }
 
+  const info = commandIndex.get(cmd);
   return {
     label: cmd,
-    type: "function",
-    apply: cmd,
+    type: info?.detail ? "variable" : "function",
+    detail: info?.detail ?? info?.package,
+    apply: info?.template ? applyTemplate(info.template) : cmd,
     boost: 1
   };
 }
@@ -339,7 +206,6 @@ export const snippets: readonly Completion[] = [
     detail: "LaTeX figure environment",
     info: "Create a figure environment",
     apply: (view, completion, from, to) => {
-      // Get current line indentation
       const line = view.state.doc.lineAt(from);
       const lineText = line.text;
       const indentMatch = lineText.match(/^(\s*)/);
@@ -359,7 +225,6 @@ export const snippets: readonly Completion[] = [
     detail: "LaTeX table environment",
     info: "Create a table environment",
     apply: (view, completion, from, to) => {
-      // Get current line indentation
       const line = view.state.doc.lineAt(from);
       const lineText = line.text;
       const indentMatch = lineText.match(/^(\s*)/);
@@ -376,30 +241,118 @@ export const snippets: readonly Completion[] = [
   }
 ];
 
+// Completions for a bracketed option list
+function optionCompletions(values: readonly string[]): Completion[] {
+  return values.map(value => ({ label: value, type: "property", apply: value, boost: 1 }));
+}
+
+// Options of \documentclass, \usepackage and \includegraphics
+function completeOptions(context: CompletionContext): CompletionResult | null {
+  const classOptions = context.matchBefore(/\\documentclass\[[^\]]*$/);
+  if (classOptions) {
+    return {
+      from: context.pos - (/[a-zA-Z0-9=.-]*$/.exec(classOptions.text)?.[0].length ?? 0),
+      options: optionCompletions(documentClassOptions),
+      validFor: /^[a-zA-Z0-9=.-]*$/
+    };
+  }
+
+  const usepackageOptions = context.matchBefore(/\\(usepackage|RequirePackage)\[[^\]]*$/);
+  if (usepackageOptions) {
+    const following = context.state.sliceDoc(context.pos, context.pos + 120);
+    const packageName = /^[^\]]*\]\s*\{([a-zA-Z0-9,.-]+)\}/.exec(following)?.[1].split(',')[0];
+    const values = packageName ? packageOptions[packageName] : undefined;
+    if (!values) return null;
+    return {
+      from: context.pos - (/[a-zA-Z0-9=.-]*$/.exec(usepackageOptions.text)?.[0].length ?? 0),
+      options: optionCompletions(values),
+      validFor: /^[a-zA-Z0-9=.-]*$/
+    };
+  }
+
+  const graphicsOptions = context.matchBefore(/\\includegraphics\[[^\]]*$/);
+  if (graphicsOptions) {
+    return {
+      from: context.pos - (/[a-zA-Z]*$/.exec(graphicsOptions.text)?.[0].length ?? 0),
+      options: includegraphicsKeys.map(key => ({
+        label: key.label,
+        type: "property",
+        detail: key.detail,
+        apply: key.label,
+        boost: 1
+      })),
+      validFor: /^[a-zA-Z]*$/
+    };
+  }
+
+  return null;
+}
+
+// Braced arguments listing known names: classes, packages and column specifications
+function completeBracedArguments(context: CompletionContext): CompletionResult | null {
+  const columnSpec = context.matchBefore(
+    new RegExp(`\\\\begin\\{(?:${TABULAR_ENVIRONMENTS})\\}(?:\\[[^\\]]*\\])?(?:\\{[^{}]*\\})?\\{[^{}]*$`)
+  );
+  if (columnSpec) {
+    return {
+      from: context.pos,
+      options: tabularColumnSpecs.map(spec => ({
+        label: spec.label,
+        type: "type",
+        detail: spec.detail,
+        apply: spec.template ? applyTemplate(spec.template) : spec.label,
+        boost: 1
+      })),
+      validFor: /^$/
+    };
+  }
+
+  const classMatch = context.matchBefore(/\\documentclass(\[[^\]]*\])?\{([a-zA-Z0-9,.-]*)$/);
+  if (classMatch) {
+    return {
+      from: classMatch.from + classMatch.text.lastIndexOf('{') + 1,
+      options: documentClasses.map(name => ({ label: name, type: "constant", apply: name, boost: 1 })),
+      validFor: /^[a-zA-Z0-9.-]*$/
+    };
+  }
+
+  const packageMatch = context.matchBefore(/\\(usepackage|RequirePackage)(\[[^\]]*\])?\{([a-zA-Z0-9,.-]*)$/);
+  if (packageMatch) {
+    return {
+      from: packageMatch.from + packageMatch.text.lastIndexOf('{') + 1,
+      options: packages.map(pkg => ({ label: pkg, type: "constant", apply: pkg, boost: 1 })),
+      validFor: /^[a-zA-Z0-9,.-]*$/
+    };
+  }
+
+  return null;
+}
+
 // Main completion function that provides autocomplete suggestions based on context
 export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
   return function (context: CompletionContext): CompletionResult | null {
-    // Broaden the matching pattern for better detection
-    if (!context.explicit) {
-      const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);
-      if (!before || before.from === before.to) {
-        return null;
-      }
-    }
+    const optionResult = completeOptions(context);
+    if (optionResult) return optionResult;
+
+    const bracedResult = completeBracedArguments(context);
+    if (bracedResult) return bracedResult;
 
     // Check if we're in an environment name. Boost math inside math environments
     if (isInEnvironmentName(context)) {
-      const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z]*)$/);
+      const envMatch = context.matchBefore(/\\(begin|end)\{([a-zA-Z*]*)$/);
       if (envMatch) {
         const inMath = isInMathMode(context);
-        const mathOnlySet = new Set(MATH_ONLY_ENVIRONMENTS);
-        const available = environments.filter(env => {
-          if (mathOnlySet.has(env.replace(/\*$/, ''))) {
-            return inMath;
+        const available = latexEnvironments.filter(environment => !environment.mathOnly || inMath);
+        const options = available.map(environment =>
+          createEnvironmentCompletion(environment.name, autoCloseTagsEnabled)
+        );
+
+        if (envMatch.text.startsWith('\\end')) {
+          const open = innermostOpenEnvironment(context);
+          if (open) {
+            options.unshift(createEnvironmentCompletion(open, autoCloseTagsEnabled, 99));
           }
-          return true;
-        });
-        const options = available.map(env => createEnvironmentCompletion(env, autoCloseTagsEnabled));
+        }
 
         return {
           from: envMatch.from + envMatch.text.lastIndexOf('{') + 1,
@@ -417,7 +370,12 @@ export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
 
         // Add math commands if in math mode
         if (isInMathMode(context)) {
-          options = [...options, ...mathCommands.map(cmd => createCommandCompletion(cmd, autoCloseTagsEnabled))];
+          options = [
+            ...options,
+            ...mathCommands
+              .filter(cmd => !commandSet.has(cmd))
+              .map(cmd => createCommandCompletion(cmd, autoCloseTagsEnabled))
+          ];
         }
 
         // Add snippets to the commands
@@ -429,21 +387,6 @@ export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
           validFor: /^\\?[a-zA-Z]*$/
         };
       }
-    }
-
-    // Check if we're after \usepackage{
-    const packageMatch = context.matchBefore(/\\usepackage(\[\S*\])?\{([a-zA-Z,]*)$/);
-    if (packageMatch) {
-      return {
-        from: packageMatch.from + packageMatch.text.lastIndexOf('{') + 1,
-        options: packages.map(pkg => ({
-          label: pkg,
-          type: "constant",
-          apply: pkg,
-          boost: 1
-        })),
-        validFor: /^[a-zA-Z,]*$/
-      };
     }
 
     return null;
