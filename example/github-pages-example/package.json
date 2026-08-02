@@ -1,6 +1,6 @@
 {
   "name": "latex-extension-demo-pages",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "GitHub Pages Demo for CodeMirror LaTeX extension",
   "author": "Fares Abawi <fares@abawi.me> (https://abawi.me)",
   "license": "AGPL-3.0-or-later",
@@ -21,6 +21,7 @@
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.3",
+    "@codemirror/legacy-modes": "^6.5.3",
     "@codemirror/lint": "^6.9.5",
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.6.0",

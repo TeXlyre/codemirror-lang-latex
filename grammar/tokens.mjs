@@ -714,6 +714,8 @@ const verbatimEnvNames = new Set([
   'tcblisting',
   'codeexample',
   'comment',
+  'luacode',
+  'luacode*',
 ])
 
 const otherKnownEnvNames = {
