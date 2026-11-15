@@ -3,6 +3,10 @@
 import { ExternalTokenizer, ContextTracker } from '@lezer/lr'
 
 import {
+  ArgumentChar,
+  OpenBracket,
+  Star,
+  Equals,
   LiteralArgContent,
   SpaceDelimitedLiteralArgContent,
   VerbContent,
@@ -179,7 +183,7 @@ export const elementContext = new ContextTracker({
 
 // tokenizer for \verb|...| commands
 export const verbTokenizer = new ExternalTokenizer(
-  (input, stack) => {
+  input => {
     if (input.next === '*'.charCodeAt(0)) input.advance()
     const delimiter = input.next
     if (delimiter === -1) return // hit end of file
@@ -198,7 +202,7 @@ export const verbTokenizer = new ExternalTokenizer(
 
 // tokenizer for \lstinline|...| commands
 export const lstinlineTokenizer = new ExternalTokenizer(
-  (input, stack) => {
+  input => {
     let delimiter = input.next
     if (delimiter === -1) return // hit end of file
     if (/\s/.test(String.fromCharCode(delimiter))) {
@@ -315,9 +319,25 @@ export const argumentListWithOptionalTokenizer = lookaheadTokenizer(next => {
   }
 })
 
+// Only split off a single character when a mandatory argument can consume it.
+export const argumentCharTokenizer = new ExternalTokenizer((input, stack) => {
+  const ch = input.next
+  if (ch < 0 || ch === CHAR_BACKSLASH || ch === CHAR_OPEN_BRACE ||
+      ch === CHAR_CLOSE_BRACE || ch === CHAR_SPACE || ch === CHAR_TAB ||
+      ch === CHAR_NEWLINE || ch === 13 || ch === 37 ||
+      !stack.canShift(ArgumentChar)) return
+  if ((ch === CHAR_OPEN_BRACKET && stack.canShift(OpenBracket)) ||
+      (ch === 42 && stack.canShift(Star)) ||
+      (ch === 61 && stack.canShift(Equals))) return
+  // Consume a Unicode code point rather than half a surrogate pair.
+  const next = input.peek(1)
+  const width = ch >= 0xd800 && ch <= 0xdbff && next >= 0xdc00 && next <= 0xdfff ? 2 : 1
+  input.acceptToken(ArgumentChar, width)
+}, { contextual: true, fallback: true })
+
 const CHAR_AT_SYMBOL = _char('@')
 
-export const csnameTokenizer = new ExternalTokenizer((input, stack) => {
+export const csnameTokenizer = new ExternalTokenizer(input => {
   let offset = 0
   let end = -1
   // look at the first character, we are looking for acceptable control sequence names
@@ -342,33 +362,31 @@ export const csnameTokenizer = new ExternalTokenizer((input, stack) => {
     end = offset
     offset++
   }
-  if (end === -1) return
+  if (end < 1) return
   // accept the content as a valid control sequence
   return input.acceptToken(Csname, end + 1)
 })
 
 const END_DOCUMENT_MARK = '\\end{document}'.split('').reverse()
 
-export const trailingContentTokenizer = new ExternalTokenizer(
-  (input, stack) => {
-    if (input.next === -1) return // no trailing content
-    // Look back for end-document mark, bail out if any characters do not match
-    for (let i = 1; i < END_DOCUMENT_MARK.length + 1; i++) {
-      if (String.fromCharCode(input.peek(-i)) !== END_DOCUMENT_MARK[i - 1]) {
-        return
-      }
+export const trailingContentTokenizer = new ExternalTokenizer(input => {
+  if (input.next === -1) return // no trailing content
+  // Look back for end-document mark, bail out if any characters do not match
+  for (let i = 1; i < END_DOCUMENT_MARK.length + 1; i++) {
+    if (String.fromCharCode(input.peek(-i)) !== END_DOCUMENT_MARK[i - 1]) {
+      return
     }
-    while (input.next === CHAR_SPACE || input.next === CHAR_NEWLINE) {
-      const next = input.advance()
-      if (next === -1) return input.acceptToken(TrailingWhitespaceOnly) // trailing whitespace only
-    }
-    // accept the all content up to the end of the document
-    while (input.advance() !== -1) {
-      //
-    }
-    return input.acceptToken(TrailingContent)
   }
-)
+  while (input.next === CHAR_SPACE || input.next === CHAR_NEWLINE) {
+    const next = input.advance()
+    if (next === -1) return input.acceptToken(TrailingWhitespaceOnly) // trailing whitespace only
+  }
+  // accept the all content up to the end of the document
+  while (input.advance() !== -1) {
+    //
+  }
+  return input.acceptToken(TrailingContent)
+})
 
 const refCommands = new Set([
   '\\fullref',
@@ -616,7 +634,7 @@ const otherKnowncommands = {
 }
 // specializer for control sequences
 // return new tokens for specific control sequences
-export const specializeCtrlSeq = (name, terms) => {
+export const specializeCtrlSeq = name => {
   if (name === '\\begin') return Begin
   if (name === '\\end') return End
   if (refCommands.has(name)) {
@@ -730,7 +748,7 @@ const otherKnownEnvNames = {
   description: ListEnvName,
 }
 
-export const specializeEnvName = (name, terms) => {
+export const specializeEnvName = name => {
   if (tabularEnvNames.has(name)) {
     return TabularEnvName
   }
@@ -754,6 +772,6 @@ const otherKnownCtrlSyms = {
   '\\\\': LineBreakCtrlSym,
 }
 
-export const specializeCtrlSym = (name, terms) => {
+export const specializeCtrlSym = name => {
   return otherKnownCtrlSyms[name] || -1
 }

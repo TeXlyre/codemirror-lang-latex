@@ -1,3 +1,5 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { EditorState } from '@codemirror/state';
 import { syntaxTree, StreamLanguage } from '@codemirror/language';
 import { lua } from '@codemirror/legacy-modes/mode/lua';
@@ -34,25 +36,25 @@ describe('nested environment parsing', () => {
 
   it('parses luacode bodies with the nested language', () => {
     const names = nodesIn(state, doc.indexOf('local t'), 40);
-    expect(names).toEqual(expect.arrayContaining(['keyword', 'variableName', 'number', 'string']));
-    expect(names).not.toContain('VerbatimContent');
+    for (const value of ['keyword', 'variableName', 'number', 'string']) assert.ok(names.includes(value), `Missing value: ${value}`);
+    assert.ok(!names.includes('VerbatimContent'));
   });
 
   it('leaves other verbatim environments alone', () => {
-    expect(nodesIn(state, doc.indexOf('local x = 1'), 11)).toContain('VerbatimContent');
+    assert.ok(nodesIn(state, doc.indexOf('local x = 1'), 11).includes('VerbatimContent'));
   });
 
   it('keeps the default parser when no nested languages are configured', () => {
     const plain = EditorState.create({ doc, extensions: [latex()] });
-    expect(nodesIn(plain, doc.indexOf('local t'), 40)).toContain('VerbatimContent');
+    assert.ok(nodesIn(plain, doc.indexOf('local t'), 40).includes('VerbatimContent'));
   });
 
   it('treats luacode as verbatim when linting', () => {
-    expect(messages(lint(doc))).toEqual([]);
+    assert.deepEqual(messages(lint(doc)), []);
   });
 
   it('completes the luacode environments', () => {
-    expect(latexCompletions.environments).toContain('luacode');
-    expect(latexCompletions.environments).toContain('luacode*');
+    assert.ok(latexCompletions.environments.includes('luacode'));
+    assert.ok(latexCompletions.environments.includes('luacode*'));
   });
 });
