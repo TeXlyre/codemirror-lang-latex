@@ -135,14 +135,20 @@
     LineBreakCtrlSym
 }
 
+@external tokens argumentCharTokenizer from "./tokens.mjs" {
+    ArgumentChar
+}
+
 @tokens {
+    star[@export=Star] { "*" }
+    equals[@export=Equals] { "=" }
     CtrlSeq { "\\" $[a-zA-Z]+ }
     CtrlSym { "\\" ![a-zA-Z] }
 
     // tokens for paragraphs
     Whitespace { $[ \t]+ }
     NewLine { "\n" }
-    BlankLine { "\n" "\n"+ }
+    BlankLine { "\n" ($[ \t]* "\n")+ }
     Normal { ![\\{}\[\]$&~#% \t\n] ![\\{}\[\]$&~#%\t\n]* }  // everything is normal text, except these characters
     @precedence { CtrlSeq, CtrlSym, BlankLine, NewLine, Whitespace, Normal }
 
@@ -179,6 +185,28 @@ optionalWhitespace {
     !argument Whitespace
 }
 
+// Required argument boundaries allow line breaks, but not paragraph breaks.
+argumentSpace {
+    !argument (Whitespace+ (NewLine Whitespace*)? | NewLine Whitespace*)
+}
+
+optionalArg {
+    OptionalArgument argumentSpace?
+}
+
+controlSequenceArgument {
+    Csname | CtrlSym | OpenParenCtrlSym | CloseParenCtrlSym |
+    OpenBracketCtrlSym | CloseBracketCtrlSym | LineBreakCtrlSym
+}
+
+singleArgument {
+    controlSequenceArgument | ArgumentChar
+}
+
+mandatoryArgument<Braced> {
+    Braced | singleArgument
+}
+
 OptionalArgument {
     !argument OpenBracket ShortOptionalArg CloseBracket
 }
@@ -188,23 +216,23 @@ TextArgument {
 }
 
 SectioningArgument {
-    !argument OpenBrace LongArg CloseBrace
+    !argument mandatoryArgument<(OpenBrace LongArg CloseBrace)>
 }
 
 LabelArgument {
-    !argument ShortTextArgument
+    !argument mandatoryArgument<ShortTextArgument>
 }
 
 RefArgument {
-    !argument ShortTextArgument
+    !argument mandatoryArgument<ShortTextArgument>
 }
 
 BibKeyArgument {
-    !argument ShortTextArgument
+    !argument mandatoryArgument<ShortTextArgument>
 }
 
 PackageArgument {
-    !argument ShortTextArgument
+    !argument mandatoryArgument<ShortTextArgument>
 }
 
 TabularArgument {
@@ -223,8 +251,27 @@ BareFilePathArgument {
     Whitespace SpaceDelimitedLiteralArgContent
 }
 
-DefinitionArgument {
-    !argument NewLine? Whitespace* OpenBrace DefinitionFragment? CloseBrace
+definitionBody {
+    OpenBrace DefinitionFragment? CloseBrace
+}
+
+DefinitionArgument<Body> {
+    !argument Body
+}
+
+commandDefinition<Command> {
+    Command star? argumentSpace?
+    (controlSequenceArgument | OpenBrace LiteralArgContent CloseBrace)
+    argumentSpace? optionalArg*
+    DefinitionArgument<mandatoryArgument<definitionBody>>
+}
+
+environmentDefinition<Command> {
+    Command star? argumentSpace?
+    mandatoryArgument<(OpenBrace LiteralArgContent CloseBrace)>
+    argumentSpace? optionalArg*
+    DefinitionArgument<mandatoryArgument<definitionBody>>
+    argumentSpace? DefinitionArgument<mandatoryArgument<definitionBody>>
 }
 
 MacroParameter {
@@ -240,53 +287,54 @@ OptionalMacroParameter {
 // structure
 KnownCommand<ArgumentType> {
     Title {
-        TitleCtrlSeq optionalWhitespace? OptionalArgument? TextArgument
+        TitleCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     Author {
-        AuthorCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+        AuthorCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     Affil {
-        AffilCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+        AffilCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     Affiliation {
-        AffiliationCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+        AffiliationCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     Date {
-        DateCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? ShortTextArgument
+        DateCtrlSeq argumentSpace? optionalArg? mandatoryArgument<ShortTextArgument>
     } |
     DocumentClass {
-        DocumentClassCtrlSeq optionalWhitespace? OptionalArgument?
-        DocumentClassArgument { ShortTextArgument }
+        DocumentClassCtrlSeq argumentSpace? optionalArg?
+        DocumentClassArgument { mandatoryArgument<ShortTextArgument> }
     } |
     BibliographyCommand {
-        BibliographyCtrlSeq optionalWhitespace?
-        BibliographyArgument { ShortTextArgument }
+        BibliographyCtrlSeq argumentSpace?
+        BibliographyArgument { mandatoryArgument<ShortTextArgument> }
     } |
     BibliographyStyleCommand {
-        BibliographyStyleCtrlSeq optionalWhitespace?
-        BibliographyStyleArgument { ShortTextArgument }
+        BibliographyStyleCtrlSeq argumentSpace?
+        BibliographyStyleArgument { mandatoryArgument<ShortTextArgument> }
     } |
     UsePackage {
-        UsePackageCtrlSeq optionalWhitespace? OptionalArgument?
+        UsePackageCtrlSeq argumentSpace? optionalArg?
         PackageArgument
     } |
     TextColorCommand {
-        TextColorCtrlSeq optionalWhitespace? ShortTextArgument optionalWhitespace? ArgumentType
+        TextColorCtrlSeq argumentSpace? mandatoryArgument<ShortTextArgument> argumentSpace? mandatoryArgument<ArgumentType>
     } |
     ColorBoxCommand {
-        ColorBoxCtrlSeq optionalWhitespace? ShortTextArgument optionalWhitespace? ArgumentType
+        ColorBoxCtrlSeq argumentSpace? mandatoryArgument<ShortTextArgument> argumentSpace? mandatoryArgument<ArgumentType>
     } |
     HrefCommand {
-        HrefCtrlSeq optionalWhitespace? UrlArgument ShortTextArgument
+        HrefCtrlSeq argumentSpace? UrlArgument argumentSpace? mandatoryArgument<ShortTextArgument>
     } |
     NewTheoremCommand {
-        NewTheoremCtrlSeq "*"? optionalWhitespace? ShortTextArgument ((OptionalArgument? TextArgument) | (TextArgument OptionalArgument))
+        NewTheoremCtrlSeq star? argumentSpace? mandatoryArgument<ShortTextArgument>
+        argumentSpace? (OptionalArgument argumentSpace? mandatoryArgument<TextArgument> | mandatoryArgument<TextArgument> (!argument OptionalArgument)?)
     } |
     TheoremStyleCommand {
-        TheoremStyleCtrlSeq optionalWhitespace? ShortTextArgument
+        TheoremStyleCtrlSeq argumentSpace? mandatoryArgument<ShortTextArgument>
     } |
     UrlCommand {
-        UrlCtrlSeq optionalWhitespace? UrlArgument
+        UrlCtrlSeq argumentSpace? UrlArgument
     } |
     VerbCommand {
         VerbCtrlSeq VerbContent
@@ -295,69 +343,56 @@ KnownCommand<ArgumentType> {
         LstInlineCtrlSeq optionalWhitespace? OptionalArgument? LstInlineContent
     } |
     IncludeGraphics {
-        IncludeGraphicsCtrlSeq optionalWhitespace? OptionalArgument?
+        IncludeGraphicsCtrlSeq argumentSpace? optionalArg?
         IncludeGraphicsArgument { FilePathArgument }
     } |
     IncludeSvg {
-        IncludeSvgCtrlSeq optionalWhitespace? OptionalArgument?
+        IncludeSvgCtrlSeq argumentSpace? optionalArg?
         IncludeSvgArgument { FilePathArgument }
     } |
     Caption {
-        CaptionCtrlSeq "*"? optionalWhitespace? OptionalArgument? TextArgument
+        CaptionCtrlSeq star? argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     Label {
-        LabelCtrlSeq optionalWhitespace? LabelArgument
+        LabelCtrlSeq argumentSpace? LabelArgument
     } |
     Ref {
-        (RefCtrlSeq | RefStarrableCtrlSeq "*"?) optionalWhitespace? OptionalArgument? optionalWhitespace? OptionalArgument? optionalWhitespace? RefArgument
+        (RefCtrlSeq | RefStarrableCtrlSeq star?) argumentSpace? (optionalArg optionalArg?)? RefArgument
     } |
     Cite {
-        (CiteCtrlSeq | CiteStarrableCtrlSeq "*"?) optionalWhitespace? OptionalArgument? optionalWhitespace? OptionalArgument? optionalWhitespace? BibKeyArgument
+        (CiteCtrlSeq | CiteStarrableCtrlSeq star?) argumentSpace? (optionalArg optionalArg?)? BibKeyArgument
     } |
     Def {
         // allow more general Csname argument to \def commands, since other symbols such as '@' are often used in definitions
-        DefCtrlSeq optionalWhitespace? (Csname | CtrlSym) optionalWhitespace? (MacroParameter | OptionalMacroParameter)* optionalWhitespace? DefinitionArgument
+        DefCtrlSeq argumentSpace? controlSequenceArgument argumentSpace?
+        ((MacroParameter | OptionalMacroParameter) argumentSpace?)* DefinitionArgument<definitionBody>
     } |
     Let {
-        LetCtrlSeq Csname optionalWhitespace? "="? optionalWhitespace? Csname
+        LetCtrlSeq argumentSpace? controlSequenceArgument argumentSpace? (equals argumentSpace?)? singleArgument
     } |
     Hbox {
-        HboxCtrlSeq optionalWhitespace? TextArgument
+        HboxCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     NewCommand {
-        NewCommandCtrlSeq optionalWhitespace?
-        (Csname | OpenBrace LiteralArgContent CloseBrace)
-        (OptionalArgument)*
-        DefinitionArgument
+        commandDefinition<NewCommandCtrlSeq>
     } |
     RenewCommand {
-        RenewCommandCtrlSeq optionalWhitespace?
-        (Csname | OpenBrace LiteralArgContent CloseBrace)
-        (OptionalArgument)*
-        DefinitionArgument
+        commandDefinition<RenewCommandCtrlSeq>
     } |
     NewEnvironment {
-        NewEnvironmentCtrlSeq optionalWhitespace?
-        (OpenBrace LiteralArgContent CloseBrace)
-        (OptionalArgument)*
-        DefinitionArgument
-        DefinitionArgument
+        environmentDefinition<NewEnvironmentCtrlSeq>
     } |
     RenewEnvironment {
-        RenewEnvironmentCtrlSeq optionalWhitespace?
-        (Csname | OpenBrace LiteralArgContent CloseBrace)
-        (OptionalArgument)*
-        DefinitionArgument
-        DefinitionArgument
+        environmentDefinition<RenewEnvironmentCtrlSeq>
     } |
     Input {
         InputCtrlSeq InputArgument { ( FilePathArgument | BareFilePathArgument ) }
     } |
     Include {
-        IncludeCtrlSeq IncludeArgument { FilePathArgument }
+        IncludeCtrlSeq argumentSpace? IncludeArgument { FilePathArgument }
     } |
     Subfile {
-        SubfileCtrlSeq SubfileArgument { FilePathArgument }
+        SubfileCtrlSeq argumentSpace? SubfileArgument { FilePathArgument }
     } |
     Centering {
         CenteringCtrlSeq
@@ -373,60 +408,60 @@ KnownCommand<ArgumentType> {
     } |
     MultiColumn {
         MultiColumnCtrlSeq
-            optionalWhitespace? SpanArgument { ShortTextArgument }
-            optionalWhitespace? ColumnArgument { ShortTextArgument }
-            optionalWhitespace? TabularArgument
+            argumentSpace? SpanArgument { mandatoryArgument<ShortTextArgument> }
+            argumentSpace? ColumnArgument { mandatoryArgument<ShortTextArgument> }
+            argumentSpace? mandatoryArgument<TabularArgument>
     } |
     MathTextCommand {
-        MathTextCtrlSeq optionalWhitespace? "*"? TextArgument
+        MathTextCtrlSeq argumentSpace? (star argumentSpace?)? mandatoryArgument<TextArgument>
     } |
     ParBoxCommand {
         ParBoxCtrlSeq
-            (optionalWhitespace? OptionalArgument)*
-            ShortTextArgument
-            optionalWhitespace? TextArgument
+            argumentSpace? optionalArg*
+            mandatoryArgument<ShortTextArgument>
+            argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextBoldCommand {
-        TextBoldCtrlSeq TextArgument
+        TextBoldCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextItalicCommand {
-        TextItalicCtrlSeq TextArgument
+        TextItalicCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextSmallCapsCommand {
-        TextSmallCapsCtrlSeq TextArgument
+        TextSmallCapsCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextTeletypeCommand {
-        TextTeletypeCtrlSeq TextArgument
+        TextTeletypeCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextMediumCommand {
-        TextMediumCtrlSeq TextArgument
+        TextMediumCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextSansSerifCommand {
-        TextSansSerifCtrlSeq TextArgument
+        TextSansSerifCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextSuperscriptCommand {
-        TextSuperscriptCtrlSeq TextArgument
+        TextSuperscriptCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     TextSubscriptCommand {
-        TextSubscriptCtrlSeq TextArgument
+        TextSubscriptCtrlSeq argumentSpace? mandatoryArgument<TextArgument>
     } |
     StrikeOutCommand {
-        TextStrikeOutCtrlSeq ArgumentType
+        TextStrikeOutCtrlSeq argumentSpace? mandatoryArgument<ArgumentType>
     } |
     EmphasisCommand {
-        EmphasisCtrlSeq ArgumentType
+        EmphasisCtrlSeq argumentSpace? mandatoryArgument<ArgumentType>
     } |
     UnderlineCommand {
-        UnderlineCtrlSeq ArgumentType
+        UnderlineCtrlSeq argumentSpace? mandatoryArgument<ArgumentType>
     } |
     SetLengthCommand {
-        SetLengthCtrlSeq optionalWhitespace? ShortTextArgument optionalWhitespace? ShortTextArgument
+        SetLengthCtrlSeq argumentSpace? mandatoryArgument<ShortTextArgument> argumentSpace? mandatoryArgument<ShortTextArgument>
     } |
     FootnoteCommand {
-        FootnoteCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+        FootnoteCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     } |
     EndnoteCommand {
-        EndnoteCtrlSeq optionalWhitespace? OptionalArgument? optionalWhitespace? TextArgument
+        EndnoteCtrlSeq argumentSpace? optionalArg? mandatoryArgument<TextArgument>
     }
 }
 
@@ -491,7 +526,7 @@ Content<Element> {
 }
 
 SectioningCommand<Command> {
-    Command optionalWhitespace? "*"? optionalWhitespace? OptionalArgument? optionalWhitespace? SectioningArgument
+    Command argumentSpace? (star argumentSpace?)? optionalArg? SectioningArgument
 }
 
 documentSection<Command, Next> {

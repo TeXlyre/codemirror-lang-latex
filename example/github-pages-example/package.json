@@ -11,29 +11,29 @@
   "homepage": "https://texlyre.github.io/codemirror-lang-latex/",
   "private": true,
   "overrides": {
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.3"
   },
   "scripts": {
     "build": "webpack --mode production",
     "start": "webpack serve --mode development"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "^6.20.1",
-    "@codemirror/commands": "^6.10.3",
-    "@codemirror/language": "^6.12.3",
-    "@codemirror/legacy-modes": "^6.5.3",
-    "@codemirror/lint": "^6.9.5",
-    "@codemirror/search": "^6.6.0",
-    "@codemirror/state": "^6.6.0",
-    "@codemirror/view": "^6.41.0"
+    "@codemirror/autocomplete": "^6.20.4",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/legacy-modes": "^6.5.5",
+    "@codemirror/lint": "^6.9.8",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^14.0.0",
-    "css-loader": "^7.1.4",
-    "html-webpack-plugin": "^5.6.7",
+    "css-loader": "^7.1.5",
+    "html-webpack-plugin": "^5.6.8",
     "style-loader": "^4.0.0",
-    "webpack": "5.106.2",
-    "webpack-cli": "^7.0.2",
-    "webpack-dev-server": "^5.2.3"
+    "webpack": "5.112.2",
+    "webpack-cli": "^7.3.1",
+    "webpack-dev-server": "^6.1.0"
   }
 }

@@ -114,9 +114,13 @@ function checkEnvironments(tree: Tree, doc: Text, diagnostics: Diagnostic[]): vo
   type Occurrence = { name: string; from: number; to: number; kind: 'begin' | 'end' };
   const occurrences: Occurrence[] = [];
   const reportedEnds = new Set<number>();
-  const verbatimRanges: Array<[number, number]> = [];
+  const ignoredRanges: Array<[number, number]> = [];
 
   tree.cursor().iterate(node => {
+    if (node.name === 'DefinitionArgument') {
+      ignoredRanges.push([node.from, node.to]);
+      return false;
+    }
     if (node.name === 'BeginEnv' || node.name === 'EndEnv') {
       const nameNode = findEnvName(node.node);
       if (!nameNode) return;
@@ -127,7 +131,7 @@ function checkEnvironments(tree: Tree, doc: Text, diagnostics: Diagnostic[]): vo
         kind: node.name === 'BeginEnv' ? 'begin' : 'end',
       });
     } else if (node.name === 'VerbatimEnvironment' || node.name === 'VerbCtrlSeq') {
-      verbatimRanges.push([node.from, node.to]);
+      ignoredRanges.push([node.from, node.to]);
     }
   });
 
@@ -179,7 +183,7 @@ function checkEnvironments(tree: Tree, doc: Text, diagnostics: Diagnostic[]): vo
     });
   }
 
-  scanOrphanEnds(doc, diagnostics, reportedEnds, verbatimRanges);
+  scanOrphanEnds(doc, diagnostics, reportedEnds, ignoredRanges);
 }
 
 // Regex-based safety net for orphan \end{...} the parser does not surface as EndEnv
@@ -258,15 +262,16 @@ function maskCommentsAndRanges(text: string, ranges: Array<[number, number]>): s
 
   if (ranges.length === 0) return result;
 
-  let masked = result;
+  if (!ranges.length) return result;
+  const masked = result.split('');
   for (const [from, to] of ranges) {
     const safeFrom = Math.max(0, from);
     const safeTo = Math.min(masked.length, to);
-    if (safeFrom >= safeTo) continue;
-    const segment = masked.slice(safeFrom, safeTo).replace(/[^\n]/g, ' ');
-    masked = masked.slice(0, safeFrom) + segment + masked.slice(safeTo);
+    for (let i = safeFrom; i < safeTo; i++) {
+      if (masked[i] !== '\n') masked[i] = ' ';
+    }
   }
-  return masked;
+  return masked.join('');
 }
 
 // Validates labels, refs, citations, and bibliography presence
@@ -477,7 +482,7 @@ function readBracedArgument(node: SyntaxNode, doc: Text): string | null {
   let sibling: SyntaxNode | null = node.nextSibling;
   while (sibling) {
     const name = sibling.name;
-    if (name === 'OptionalArgument' || name.startsWith('Optional')) {
+    if (name.startsWith('Optional') || name === 'Whitespace' || name === 'NewLine' || name === 'Comment') {
       sibling = sibling.nextSibling;
       continue;
     }
@@ -497,14 +502,16 @@ function checkUsage(
   opts: { mathMode: boolean; deprecated: boolean; missingPackages: boolean },
 ): void {
   const text = doc.toString();
-  const verbatimRanges: Array<[number, number]> = [];
+  const ignoredRanges: Array<[number, number]> = [];
   tree.cursor().iterate(node => {
-    if (node.name === 'VerbatimEnvironment' || node.name === 'VerbCtrlSeq') {
-      verbatimRanges.push([node.from, node.to]);
+    if (node.name === 'VerbatimEnvironment' || node.name === 'VerbCtrlSeq' ||
+        ['NewCommand', 'RenewCommand', 'NewEnvironment', 'RenewEnvironment', 'Def'].includes(node.name)) {
+      ignoredRanges.push([node.from, node.to]);
+      return false;
     }
   });
 
-  const masked = maskDefinitionBodies(maskCommentsAndRanges(text, verbatimRanges));
+  const masked = maskDefinitionBodies(maskCommentsAndRanges(text, ignoredRanges));
   const { mathRanges } = scanLatexModes(text);
   const reportedPackages = new Set<string>();
 

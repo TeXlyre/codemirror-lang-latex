@@ -3,6 +3,10 @@
 import { ExternalTokenizer, ContextTracker } from '@lezer/lr'
 
 import {
+  ArgumentChar,
+  OpenBracket,
+  Star,
+  Equals,
   LiteralArgContent,
   SpaceDelimitedLiteralArgContent,
   VerbContent,
@@ -315,6 +319,22 @@ export const argumentListWithOptionalTokenizer = lookaheadTokenizer(next => {
   }
 })
 
+// Only split off a single character when a mandatory argument can consume it.
+export const argumentCharTokenizer = new ExternalTokenizer((input, stack) => {
+  const ch = input.next
+  if (ch < 0 || ch === CHAR_BACKSLASH || ch === CHAR_OPEN_BRACE ||
+      ch === CHAR_CLOSE_BRACE || ch === CHAR_SPACE || ch === CHAR_TAB ||
+      ch === CHAR_NEWLINE || ch === 13 || ch === 37 ||
+      !stack.canShift(ArgumentChar)) return
+  if ((ch === CHAR_OPEN_BRACKET && stack.canShift(OpenBracket)) ||
+      (ch === 42 && stack.canShift(Star)) ||
+      (ch === 61 && stack.canShift(Equals))) return
+  // Consume a Unicode code point rather than half a surrogate pair.
+  const next = input.peek(1)
+  const width = ch >= 0xd800 && ch <= 0xdbff && next >= 0xdc00 && next <= 0xdfff ? 2 : 1
+  input.acceptToken(ArgumentChar, width)
+}, { contextual: true, fallback: true })
+
 const CHAR_AT_SYMBOL = _char('@')
 
 export const csnameTokenizer = new ExternalTokenizer(input => {
@@ -342,7 +362,7 @@ export const csnameTokenizer = new ExternalTokenizer(input => {
     end = offset
     offset++
   }
-  if (end === -1) return
+  if (end < 1) return
   // accept the content as a valid control sequence
   return input.acceptToken(Csname, end + 1)
 })

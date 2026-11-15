@@ -1,10 +1,14 @@
 // rollup.config.js
-import typescript from '@rollup/plugin-typescript'
-import dts from 'rollup-plugin-dts'
+import { copyFileSync } from 'node:fs'
+import { dts } from 'rollup-plugin-dts'
+
+for (const file of ['latex.mjs', 'latex.terms.mjs', 'tokens.mjs']) {
+  copyFileSync(new URL(`./src/${file}`, import.meta.url), new URL(`./.build/${file}`, import.meta.url))
+}
 
 export default [
   {
-    input: 'src/index.ts',
+    input: '.build/index.js',
     output: {
       format: 'es',
       file: 'dist/index.js',
@@ -20,12 +24,6 @@ export default [
       '@lezer/highlight',
       '@lezer/lr',
       'tslib'
-    ],
-    plugins: [
-      typescript({
-        sourceMap: true,
-        inlineSources: true
-      })
     ]
   },
   {

@@ -6,7 +6,7 @@ import {
 } from '@codemirror/language';
 import { styleTags, tags as t } from '@lezer/highlight';
 import { Parser, SyntaxNode, parseMixed } from '@lezer/common';
-import { Extension } from '@codemirror/state';
+import { EditorState, Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
 import { closeBrackets } from '@codemirror/autocomplete';
@@ -22,13 +22,22 @@ export const latexBracketMatching = bracketMatching({
   brackets: "()[]{}"
 });
 
+function foldingNodeAtLine(state: EditorState, lineStart: number, matches: (node: SyntaxNode) => boolean): SyntaxNode | null {
+  const line = state.doc.lineAt(lineStart);
+  const offset = line.text.search(/\S/);
+  if (offset < 0) return null;
+  let node: SyntaxNode | null = syntaxTree(state).resolveInner(lineStart + offset, 1);
+  while (node && !matches(node)) node = node.parent;
+  return node;
+}
+
 // Fold preamble
 function preambleFoldRanges(state: any, lineStart: number, lineEnd: number) {
   const tree = syntaxTree(state);
   const doc = state.doc;
-  const startLine = doc.lineAt(lineStart);
-
-  if (!/^\s*\\documentclass\b/.test(startLine.text)) return null;
+  const declaration = foldingNodeAtLine(state, lineStart, node => node.name === 'DocumentClass');
+  if (!declaration) return null;
+  const startLine = doc.lineAt(declaration.to);
   if (startLine.from !== lineStart) return null;
 
   let documentBegin = -1;
@@ -85,19 +94,17 @@ const SECTION_RANK: Record<string, number> = {
 };
 
 // Fold books, parts, chapters, sections, and paragraphs
-function sectionFoldRanges(state: any, lineStart: number, lineEnd: number) {
-  const tree = syntaxTree(state);
+function sectionFoldRanges(state: EditorState, lineStart: number, lineEnd: number) {
+  const current = foldingNodeAtLine(state, lineStart, node => node.name in SECTION_RANK);
+  const range = current && sectionFoldRange(current, state);
+  return range && range.from === lineEnd ? range : null;
+}
+
+function sectionFoldRange(current: SyntaxNode, state: EditorState) {
   const doc = state.doc;
-
-  let current: SyntaxNode | null = tree.resolveInner(lineStart, 1);
-  while (current && !(current.name in SECTION_RANK)) {
-    current = current.parent;
-  }
-  if (!current) return null;
-
-  const headingLine = doc.lineAt(current.from);
-  if (headingLine.from !== lineStart) return null;
-
+  const heading = current.getChild('SectioningCommand');
+  if (!heading) return null;
+  const headingLine = doc.lineAt(heading.to);
   const rank = SECTION_RANK[current.name];
   let endPos = current.to;
   let boundaryFound = false;
@@ -161,14 +168,7 @@ export const latexLanguage = LRLanguage.define({
         FigureEnvironment: foldInside,
         ListEnvironment: foldInside,
         TableEnvironment: foldInside,
-        Book: foldInside,
-        Part: foldInside,
-        Chapter: foldInside,
-        Section: foldInside,
-        SubSection: foldInside,
-        SubSubSection: foldInside,
-        Paragraph: foldInside,
-        SubParagraph: foldInside
+        "Book Part Chapter Section SubSection SubSubSection Paragraph SubParagraph": sectionFoldRange
       }),
       styleTags({
         // Control sequences
@@ -239,6 +239,7 @@ export const latexLanguage = LRLanguage.define({
         // Numbers and standard text
         Number: t.number,
         Normal: t.content,
+        ArgumentChar: t.content,
 
         // Special characters
         Ampersand: t.operator,
