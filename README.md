@@ -130,22 +130,22 @@ const extensions = [
 A linter function that checks for common LaTeX errors and issues.
 
 ```javascript
-import { latexLinter } from 'codemirror-lang-latex';
-import { linter } from '@codemirror/lint';
+import {latexLinter} from 'codemirror-lang-latex';
+import {linter} from '@codemirror/lint';
 
 const extensions = [
-  // ... other extensions
-  linter(latexLinter({
-    checkMissingDocumentEnv: true,        // Check for missing document environment
-    checkUnmatchedEnvironments: true,     // Check for unmatched begin/end environments
-    checkMissingReferences: true,          // Check for references to undefined labels
-    checkUnclosedBraces: true,            // Check for unclosed brackets and braces 
-    checkDuplicateLabels: true,           // Check for duplicate \label values
-    checkCitesWithoutBibliography: true,  // Check whether \cite commands are used without including a bibliography
-    checkMathModeCommands: true,          // Check for math-only commands used outside math mode
-    checkDeprecatedCommands: true,        // Check for obsolete commands and environments
-    checkMissingPackages: true,           // Check for commands whose package is not loaded
-  }))
+    // ... other extensions
+    linter(latexLinter({
+        checkMissingDocumentEnv: true,        // Check for missing document environment
+        checkUnmatchedEnvironments: true,     // Check for unmatched begin/end environments
+        checkMissingReferences: true,         // Check for references to undefined labels
+        checkUnclosedBraces: true,            // Check for unclosed brackets and braces 
+        checkDuplicateLabels: true,           // Check for duplicate \label values
+        checkCitesWithoutBibliography: true,  // Check whether \cite commands are used without including a bibliography
+        checkMathModeCommands: true,          // Check for math-only commands used outside math mode
+        checkDeprecatedCommands: true,        // Check for obsolete commands and environments
+        checkMissingPackages: true,           // Check for commands whose package is not loaded
+    }))
 ];
 ```
 
