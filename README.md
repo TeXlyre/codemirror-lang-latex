@@ -27,14 +27,14 @@ import { EditorState, EditorView } from '@codemirror/basic-setup';
 import { latex } from 'codemirror-lang-latex';
 
 let editor = new EditorView({
-  state: EditorState.create({
-    doc: '\\documentclass{article}\n\\begin{document}\nHello, world!\n\\end{document}',
-    extensions: [
-      // ... other extensions
-      latex()
-    ]
-  }),
-  parent: document.querySelector('#editor')
+    state: EditorState.create({
+        doc: '\\documentclass{article}\n\\begin{document}\nHello, world!\n\\end{document}',
+        extensions: [
+            // ... other extensions
+            latex()
+        ]
+    }),
+    parent: document.querySelector('#editor')
 });
 ```
 
@@ -45,35 +45,36 @@ let editor = new EditorView({
 The main function that creates a `LanguageSupport` instance for LaTeX.
 
 ```javascript
-import { latex } from 'codemirror-lang-latex';
+import {latex} from 'codemirror-lang-latex';
 
 // Include LaTeX support in your editor with default options
 const extensions = [
-  // ... other extensions
-  latex()
+    // ... other extensions
+    latex()
 ];
 
 // Or with specific options
 const extensions = [
-  // ... other extensions
-  latex({
-    autoCloseTags: true,      // Enable auto-close environments
-    autoCloseBrackets: true,  // Auto-close brackets
-    enableLinting: true,      // Enable linting
-    enableTooltips: true      // Enable tooltips on hover
-    enableAutocomplete?: true // Enable command autocomplete suggestions
-    fileName: 'main.tex',     // Automatically switches off checkUnmatchedEnvironments linter option when file extension != .tex
-    linter:                   // latexLinter options 
-      checkMissingDocumentEnv: true,
-      checkUnmatchedEnvironments: true,
-      checkMissingReferences: true,
-      checkUnclosedBraces: true,
-      checkDuplicateLabels: true,
-      checkCitesWithoutBibliography: true,
-      checkMathModeCommands: true,
-      checkDeprecatedCommands: true,
-      checkMissingPackages: true,
-  })
+    // ... other extensions
+    latex({
+        autoCloseTags: true,       // Enable auto-close environments
+        autoCloseBrackets: true,   // Auto-close brackets
+        enableLinting: true,       // Enable linting
+        enableTooltips: true,      // Enable tooltips on hover
+        enableAutocomplete: true,  // Enable command autocomplete suggestions
+        fileName: 'main.tex',      // Automatically switches off checkUnmatchedEnvironments linter option when file extension != .tex
+        linter: {                  // latexLinter options 
+            checkMissingDocumentEnv: true,
+            checkUnmatchedEnvironments: true,
+            checkMissingReferences: true,
+            checkUnclosedBraces: true,
+            checkDuplicateLabels: true,
+            checkCitesWithoutBibliography: true,
+            checkMathModeCommands: true,
+            checkDeprecatedCommands: true,
+            checkMissingPackages: true,
+        }
+    })
 ];
 ```
 
@@ -137,7 +138,7 @@ const extensions = [
   linter(latexLinter({
     checkMissingDocumentEnv: true,        // Check for missing document environment
     checkUnmatchedEnvironments: true,     // Check for unmatched begin/end environments
-    checkMissingReferences: true          // Check for references to undefined labels
+    checkMissingReferences: true,          // Check for references to undefined labels
     checkUnclosedBraces: true,            // Check for unclosed brackets and braces 
     checkDuplicateLabels: true,           // Check for duplicate \label values
     checkCitesWithoutBibliography: true,  // Check whether \cite commands are used without including a bibliography
@@ -209,11 +210,11 @@ const editor = new EditorView({
 The package also provides several utility functions for working with the LaTeX syntax tree:
 
 ```javascript
-import { 
-  findEnvironmentName, 
-  getIndentationLevel, 
-  findMatchingEnvironment,
-  findSectionBoundaries
+import {
+    findEnvironmentName,
+    getIndentationLevel,
+    findMatchingEnvironment,
+    findSectionBoundaries
 } from 'codemirror-lang-latex';
 ```
 
